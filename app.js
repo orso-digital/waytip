@@ -1,3 +1,5 @@
+import { isEN, startI18n, langButton } from './i18n.js';
+import './a11y.js';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
   addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
@@ -130,11 +132,22 @@ async function photoFor(en, country, hero) {
   if (hero) return (await cachedPhoto(en, country)) || (await serverPhoto(en, country));
   return (await wvPhoto(en)) || (await cachedPhoto(en, country)) || (await serverPhoto(en, country));
 }
+// מכינים את תמונת הכיסוי מראש (עד כמה שניות), כדי שהדף ייפתח כשהתמונה כבר מוכנה
+const preload = (src) => new Promise((res) => { if (!src) return res(null); const i = new Image(); i.decoding = 'async'; i.onload = () => res(src); i.onerror = () => res(null); i.src = src; });
+const within = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(undefined), ms))]);
+const ready = {};
+function prepareCover(en, country, hero) {
+  const k = (hero ? 'h:' : '') + en + '|' + (country || '');
+  if (!ready[k]) { const p = photoFor(en, country, hero).then(preload); p.then((s) => { p.done = s; }); ready[k] = p; }
+  return ready[k];
+}
 function paint(el, en, country, alt, fallback = 'see', hero = false) {
+  const k = (hero ? 'h:' : '') + en + '|' + (country || '');
+  if (ready[k] && ready[k].done) { const src = ready[k].done; el.innerHTML = ''; const img = new Image(); img.alt = alt || ''; img.src = src; img.className = 'in'; el.appendChild(img); return; }
   // בזמן הטעינה: רקע טורקיז חלק (בלי איור שמסתיר את הכותרת)
   el.innerHTML = '<div class="artwait" aria-hidden="true"></div>';
   const mine = (el._p = (el._p || 0) + 1);
-  photoFor(en, country, hero).then((src) => {
+  prepareCover(en, country, hero).then((src) => {
     if (mine !== el._p) return;
     if (!src) { el.innerHTML = '<div class="artwait done" aria-hidden="true"></div>'; return; }
     const img = new Image(); img.alt = alt || ''; img.decoding = 'async';
@@ -153,7 +166,8 @@ const POPULAR = [
   { id: 2643743, he: 'לונדון', en: 'London', country: 'United Kingdom', heC: 'בריטניה', cc: 'gb' },
   { id: 3128760, he: 'ברצלונה', en: 'Barcelona', country: 'Spain', heC: 'ספרד', cc: 'es' },
 ];
-paint($('landArt'), 'waytip hero', '', '', 'beach', true);
+if (!/d=\d+/.test(location.hash)) { showLoader(); within(prepareCover('waytip hero', '', true), 3500).then(() => { paint($('landArt'), 'waytip hero', '', '', 'beach', true); setTimeout(hideLoader, 120); }); }
+else paint($('landArt'), 'waytip hero', '', '', 'beach', true);
 $('pop').innerHTML = POPULAR.map((p, i) => `<button class="pc" data-i="${i}"><div class="art" id="pa${i}"></div><div class="t"><b>${p.he}</b><span><span class="flag">${flag(p.cc)}</span>${p.heC}</span></div></button>`).join('');
 POPULAR.forEach((p, i) => paint($('pa' + i), p.en, p.country));
 document.querySelectorAll('.pc').forEach((b) => b.onclick = () => openById(POPULAR[+b.dataset.i].id));
@@ -186,7 +200,7 @@ $('q').addEventListener('input', () => {
   if (q.length < 2) { $('sug').classList.add('hidden'); return; }
   timer = setTimeout(async () => {
     try {
-      const d = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=he&format=json`)).json();
+      const d = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=${isEN ? 'en' : 'he'}&format=json`)).json();
       lastList = d.results || [];
       $('sug').innerHTML = lastList.map((p, i) => `<li><button type="button" data-i="${i}"><span class="flag" style="box-shadow:0 0 0 1px #ddd">${flag(p.country_code)}</span>${esc(p.name)} <small>${esc([p.admin1, p.country].filter(Boolean).join(', '))}</small></button></li>`).join('') || '<li><small>לא נמצא יעד</small></li>';
       $('sug').classList.remove('hidden');
@@ -206,14 +220,15 @@ async function openById(id, fromWz) {
   showLoader();
   try {
     const [he, en] = await Promise.all([
-      fetch(`https://geocoding-api.open-meteo.com/v1/get?id=${id}&language=he`).then((r) => r.json()),
+      fetch(`https://geocoding-api.open-meteo.com/v1/get?id=${id}&language=${isEN ? 'en' : 'he'}`).then((r) => r.json()),
       fetch(`https://geocoding-api.open-meteo.com/v1/get?id=${id}&language=en`).then((r) => r.json()),
     ]);
     dest = { key: 'g' + id, id, name: he.name, enName: en.name, country: he.country || '', countryEn: en.country || '', cc: he.country_code || '', lat: he.latitude, lon: he.longitude };
     location.hash = 'd=' + id;
+    await within(prepareCover(dest.enName, dest.countryEn), 4500); // הדף נפתח עם התמונה מוכנה
     showDest(fromWz);
   } catch (e) { toast('לא הצלחתי לטעון את היעד'); }
-  finally { setTimeout(hideLoader, 450); }
+  finally { setTimeout(hideLoader, 150); }
 }
 (function fromHash() { const m = location.hash.match(/d=(\d+)/); if (m) openById(m[1]); })();
 $('home').onclick = (e) => { e.preventDefault(); history.replaceState(null, '', location.pathname); $('destPage').classList.add('hidden'); $('landing').classList.remove('hidden'); scrollTo(0, 0); };
@@ -492,3 +507,7 @@ document.querySelectorAll('.ins').forEach((b) => b.onclick = () => { W.trip = b.
 // רמז גלילה בתחתית התמונה
 document.querySelectorAll('.cue').forEach((c) => c.onclick = () => document.getElementById(c.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' }));
 addEventListener('scroll', () => document.querySelectorAll('.cue').forEach((c) => c.classList.toggle('gone', scrollY > 60)), { passive: true });
+
+// שפה: כפתור החלפה בתפריט העליון, ותרגום הממשק לאנגלית כשנבחרה
+document.querySelectorAll('.nav [data-login]').forEach((b) => b.before(langButton()));
+startI18n();

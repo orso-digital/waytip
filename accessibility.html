@@ -43,5 +43,14 @@
   <p>נתקלתם בקושי, או שאתם צריכים מידע בדרך חלופית? כתבו לנו ל-<a href="mailto:orso@outlook.co.il">orso@outlook.co.il</a>. נשמח אם תפרטו את העמוד, את הבעיה ואת סוג הדפדפן או הטכנולוגיה המסייעת שבה השתמשתם. נחזור אליכם בהקדם.</p>
   <p>אחראי נגישות: מפעיל האתר, ORSO DIGITAL · <a href="mailto:orso@outlook.co.il">orso@outlook.co.il</a></p>
 </main>
+<script type="module">
+import { isEN, langButton } from './i18n.js';
+import './a11y.js';
+const h = document.querySelector('.lhead');
+if (h) h.appendChild(langButton());
+if (isEN) { const n = document.createElement('p'); n.className = 'en-note'; n.lang = 'en'; n.dir = 'ltr';
+  n.textContent = 'This legal document is currently available in Hebrew only. It is the binding version. For questions in English, write to orso@outlook.co.il.';
+  document.querySelector('main').prepend(n); }
+</script>
 </body>
 </html>
