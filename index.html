@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" data-theme="app">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WayTip · הטיפ הנכון, בזמן הנכון</title>
+<meta name="description" content="המלצות מאומתות ממטיילים לכל יעד בעולם, לפי עונה ואופי הטיול">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Heebo:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b7a8a">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">דילוג לתוכן הראשי</a>
+
+<div id="landing">
+  <header class="cover landing">
+    <div class="art" id="landArt"></div>
+    <nav class="nav"><a class="brand" href="./" id="brand1" dir="ltr" aria-label="WayTip – לדף הבית"><img class="bmark" src="assets/mark-white.png" alt="" width="34" height="34"><span>Way<b>Tip</b></span></a><button class="navlink" data-login>התחברות</button></nav>
+    <div class="in wrap">
+      <div class="place-line">המלצות מאומתות ממטיילים, לפי עונה ואופי הטיול</div>
+      <h1>לאן טסים?</h1>
+      <div class="wz" id="wz">
+          <div class="wz-steps" role="list">
+            <span role="listitem" data-s="1" class="on">יעד</span><span role="listitem" data-s="2">תאריכים</span><span role="listitem" data-s="3">אופי הטיול</span><span role="listitem" data-s="4">העדפות</span>
+          </div>
+          <div class="wz-body">
+            <section data-step="1">
+              <h3>בחרו יעד</h3>
+              <div class="wz-field"><label for="q">עיר או מדינה</label><input id="q" placeholder="למשל רומא, בנגקוק, ניו יורק" autocomplete="off"><ul class="sug hidden" id="sug"></ul></div>
+              <div class="wz-picked hidden" id="picked"></div>
+            </section>
+            <section data-step="2" class="hidden">
+              <h3>מתי?</h3>
+              <div class="two"><div class="wz-field"><label for="from">מתאריך</label><input id="from" type="date"></div><div class="wz-field"><label for="to">עד תאריך</label><input id="to" type="date"></div></div>
+              <p class="wz-note">לפי התאריכים נציג קודם המלצות מאותה עונה, ואת מזג האוויר הצפוי.</p>
+            </section>
+            <section data-step="3" class="hidden">
+              <h3>איזה סוג טיול?</h3>
+              <div class="chips" id="wTrip"></div>
+            </section>
+            <section data-step="4" class="hidden">
+              <h3>מה חשוב לכם?</h3>
+              <div class="wz-sub">מה מעניין אתכם</div><div class="chips" id="wCat"></div>
+              <div class="wz-sub">העדפות (אפשר כמה)</div><div class="chips" id="wPref"></div>
+              <p class="wz-note">אפשר לדלג. את כל הבחירות אפשר לשנות גם אחר כך. סימונים כמו "כשר" או "ללא גלוטן" מבוססים על דיווחים ואינם אישור רשמי.</p>
+            </section>
+          </div>
+          <div class="wz-nav">
+            <button class="btn line" id="wzBack" type="button">חזרה</button>
+            <span class="wz-count" id="wzCount">שלב 1 מתוך 4</span>
+            <button class="btn" id="wzNext" type="button">המשך</button>
+          </div>
+        </div>
+    </div>
+    <button class="cue" type="button" data-go="inspo" aria-label="גללו למטה לרעיונות"><span>עוד רעיונות למטה</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+    </header>
+  <div class="wrap">
+    <section class="sec hidden" id="savedSec"><div class="sh"><h2>♥ היעדים השמורים שלך</h2><p>לחצו כדי לחזור לתכנון</p></div><div class="savedlist" id="savedList"></div></section>
+    <section class="sec"><div class="sh"><h2>איזה טיול אתם מתכננים?</h2><p>בחרו סגנון ונציג המלצות שמתאימות לו</p></div><div class="inspo" id="inspo"></div></section>
+    <section class="sec"><div class="sh"><h2>יעדים נבחרים</h2><p>נקודת התחלה טובה</p></div><div class="pop" id="pop"></div></section>
+  </div>
+</div>
+
+<div id="destPage" class="hidden">
+  <header class="cover">
+    <div class="art" id="destArt"></div>
+    <nav class="nav"><a class="brand" href="./" id="home" dir="ltr" aria-label="WayTip – לדף הבית"><img class="bmark" src="assets/mark-white.png" alt="" width="34" height="34"><span>Way<b>Tip</b></span></a><button class="navlink" data-login>התחברות</button></nav>
+    <div class="in wrap">
+      <div class="place-line"><span class="flag" id="dFlag"></span><span id="dCountry"></span><button class="savebtn" id="saveDest" aria-pressed="false"><span aria-hidden="true">♡</span> שמירה</button></div>
+      <h1 id="dName"></h1>
+      <div class="sub" id="dSub"></div>
+      <div class="strip">
+        <div><span>טמפרטורה ביום</span><b id="fDay">–</b><em>ממוצע לתאריכים (שנה שעברה)</em></div>
+        <div><span>בלילה</span><b id="fNight">–</b><em id="fWear"></em></div>
+        <div><span>ימי גשם</span><b id="fRain">–</b><em id="fRainT"></em></div>
+        <div><span>המלצות מאומתות</span><b id="fCount">–</b><em id="fCountT"></em></div>
+      </div>
+    </div>
+    <button class="cue" type="button" data-go="s-reviews" aria-label="גללו למטה להמלצות"><span>גללו להמלצות</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+  </header>
+
+  <div class="fbar"><div class="wrap">
+      <div class="fbtns">
+        <button class="fbtn" type="button" aria-expanded="false" data-p="trip"><span>אופי הטיול</span><b id="lbTrip"></b><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="fbtn" type="button" aria-expanded="false" data-p="cat"><span>מה מחפשים</span><b id="lbCat"></b><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="fbtn" type="button" aria-expanded="false" data-p="pref"><span>העדפות</span><b id="lbPref"></b><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="fbtn" type="button" aria-expanded="false" data-p="dates"><span>תאריכים</span><b id="lbDates"></b><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="clear hidden" id="clearF">ניקוי סינון</button>
+      </div>
+      <div class="fpanel hidden" data-panel="trip"><div class="chips" id="tripChips"></div></div>
+      <div class="fpanel hidden" data-panel="cat"><div class="chips" id="catChips"></div></div>
+      <div class="fpanel hidden" data-panel="pref"><div class="chips" id="prefChips"></div><div class="phint">אפשר לבחור כמה העדפות ביחד. הסימונים "כשר", "ללא גלוטן", "טבעוני" ו"נגיש" מבוססים על דיווחי מטיילים ועל תיאורים מהרשת, ואינם אישור רשמי. לפני שמסתמכים עליהם, בדקו ישירות מול המקום (למשל תעודת כשרות או רכיבים).</div></div>
+      <div class="fpanel hidden" data-panel="dates"><div class="dates"><label>מתאריך <input type="date" id="from2"></label><label>עד תאריך <input type="date" id="to2"></label></div></div>
+    </div></div>
+
+  <main class="wrap" id="main" tabindex="-1">
+    <section class="sec" id="s-reviews">
+      <div class="sh"><h2>המלצות מטיילים</h2><p id="revSub"></p></div>
+      <div class="cols" id="revMain"></div>
+      <details class="more hidden" id="moreBox"><summary id="moreSum"></summary><div class="cols" id="revOther"></div></details>
+    </section>
+
+    <section class="sec" id="s-web">
+      <div class="sh"><h2>מקומות מומלצים מהרשת</h2><p id="webSub"></p></div>
+      <div class="places" id="web"></div>
+      <div class="srcnote">מקור: <a id="wvLink" target="_blank" rel="noopener">Wikivoyage</a>, בכפוף לרישיון <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.he" target="_blank" rel="noopener">CC BY-SA 4.0</a>. הסינון לפי העדפות מבוסס על מילות מפתח בתיאור המקום. ייתכן שהמידע לא עדכני, ויש לבדוק שעות, מחירים וכשרות מול המקום עצמו.</div>
+    </section>
+
+    <section class="write" id="s-write">
+      <div>
+        <h2>ביקרתם ב<span id="wName"></span>?</h2>
+        <div class="lead">ההמלצה שלכם תעזור למטיילים שטסים באותה עונה ובאותו אופי טיול. כל המלצה נבדקת לפני פרסום.</div>
+        <div class="trust"><svg viewBox="0 0 24 24" fill="none" stroke="#0f5c55" stroke-width="1.3" stroke-linecap="round"><path d="M12 3c-3.5 0-6 2.5-6 6v3"/><path d="M18 12V9c0-1.2-.3-2.3-.9-3.2"/><path d="M9 21c-1-1.5-1.5-3.5-1.5-6V12"/><path d="M12 21c-.7-1.4-1-3.2-1-6v-3a1 1 0 0 1 2 0v3c0 2 .4 3.6 1 5"/><path d="M15.5 20c.4-1.4.5-3 .5-5v-3a4 4 0 0 0-8 0"/></svg>
+          <div><b style="color:var(--ink)">אימות בטביעת אצבע או Face ID</b><br>כך אין אצלנו המלצות מזויפות. המידע הביומטרי לא יוצא מהטלפון שלכם.</div></div>
+      </div>
+      <div class="form">
+        <div class="two"><div><label for="fCat">סוג ההמלצה</label><select id="fCat"></select></div><div><label for="fTrip">אופי הטיול שלכם</label><select id="fTrip"></select></div></div>
+        <label for="fPlace">שם המקום (לא חובה)</label><input id="fPlace" maxlength="120" placeholder="מסעדה, אטרקציה, מלון…">
+        <div class="two"><div><label for="fMonth">חודש הביקור</label><select id="fMonth"></select></div><div><label for="fYear">שנה</label><select id="fYear"></select></div></div>
+        <label>מתאים ל… (אפשר לבחור כמה)</label><div class="chips" id="fTags"></div>
+        <label>דירוג</label><div class="rate" id="rate"></div>
+        <label for="fText">ההמלצה</label><textarea id="fText" maxlength="1500" placeholder="מה כדאי לדעת? מה היה שווה ומה לא? (לפחות 30 תווים)"></textarea>
+        <label for="fVideo">סרטון מטיקטוק או אינסטגרם (לא חובה)</label><input id="fVideo" type="url" inputmode="url" dir="ltr" maxlength="300" placeholder="https://www.tiktok.com/@…/video/…">
+        <p class="hint">צילמתם את המקום? הדביקו קישור לסרטון ציבורי שלכם (שיתוף ← העתקת קישור). הסרטון יוצג בתוך ההמלצה.</p>
+        <div id="fMsg"></div>
+        <label class="agree"><input type="checkbox" id="fAgree"> <span>אני מצהיר/ה שביקרתי במקום, שההמלצה נכתבה על ידי ומשקפת את החוויה האישית שלי, שאין בה פרטים אישיים של אחרים או תוכן פוגעני, ושקראתי ואני מסכים/ה ל<a href="terms.html" target="_blank">תנאי השימוש</a> ול<a href="privacy.html" target="_blank">מדיניות הפרטיות</a>.</span></label>
+        <button class="btn w" id="send">שליחה ואימות</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer><div class="wrap">
+  <div><b style="color:var(--ink)">WayTip</b> · מופעל על ידי ORSO DIGITAL · <a href="mailto:orso@outlook.co.il">orso@outlook.co.il</a></div>
+  <nav class="foot-links" aria-label="מידע משפטי"><a href="terms.html">תנאי שימוש</a><a href="privacy.html">מדיניות פרטיות</a><a href="accessibility.html">הצהרת נגישות</a><button type="button" class="lnk hidden" id="delAcc">מחיקת החשבון שלי</button></nav>
+  <div class="foot-note">ההמלצות באתר הן דעתם האישית של המטיילים שכתבו אותן, ואינן המלצה של האתר. מזג האוויר מבוסס על נתוני השנה שעברה ואינו תחזית. צילומים: <a href="https://pixabay.com" target="_blank" rel="noopener">Pixabay</a> ו-Wikimedia Commons.</div>
+</div></footer>
+
+<div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

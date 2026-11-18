@@ -1,0 +1,479 @@
+import {
+  auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
+  addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
+} from './firebase.js';
+import { openAuth } from './account.js';
+import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js';
+import { SERVER_URL, SITE_NAME } from './config.js';
+import { loaderBlock, showLoader, hideLoader } from './loader.js';
+import { parseVideo, videoButton } from './video.js';
+import './reviews-web.js';
+import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js';
+import { mini, TRIP_ICON } from './covers.js';
+import { startRegistration, startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
+
+const $ = (id) => document.getElementById(id);
+let user = null, dest = null, reviews = [], web = [], rating = 5;
+let F = { trip: '', cat: '', prefs: new Set() };
+const toast = (t) => { $('toast').textContent = t; $('toast').classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => $('toast').classList.add('hidden'), 2800); };
+document.title = SITE_NAME;
+
+// ================= התחברות =================
+const login = (o) => openAuth(o);
+const who = (u) => u.isAnonymous ? 'אורח' : ((u.displayName || u.email || '').split(/[ @]/)[0] || 'החשבון שלי');
+onAuthStateChanged(auth, (u) => {
+  user = u;
+  document.querySelectorAll('[data-login]').forEach((b) => {
+    b.textContent = u ? who(u) : 'התחברות';
+    b.onclick = () => (u ? openMenu(b) : login().catch(() => {}));
+  });
+  $('delAcc').classList.toggle('hidden', !u);
+  syncSaved(u);
+});
+// תפריט חשבון קטן
+function openMenu(btn) {
+  let m = $('acctMenu');
+  if (!m) { m = document.createElement('div'); m.id = 'acctMenu'; m.className = 'acctmenu hidden'; m.setAttribute('role', 'menu'); document.body.appendChild(m);
+    document.addEventListener('click', (e) => { if (!e.target.closest('#acctMenu') && !e.target.closest('[data-login]')) m.classList.add('hidden'); }); }
+  const u = user;
+  m.innerHTML = `<div class="am-h">${esc(u.isAnonymous ? 'מחוברים כאורח' : (u.email || u.displayName || ''))}</div>
+    <button role="menuitem" data-a="saved">♥ היעדים השמורים שלי (${savedList().length})</button>
+    ${u.isAnonymous ? '<button role="menuitem" data-a="upgrade">יצירת חשבון (כדי לכתוב המלצות)</button>' : ''}
+    ${!u.isAnonymous && !u.emailVerified ? '<button role="menuitem" data-a="verify">שליחת מייל אימות שוב</button>' : ''}
+    <button role="menuitem" data-a="out">יציאה</button>`;
+  const r = btn.getBoundingClientRect();
+  m.style.top = (r.bottom + scrollY + 8) + 'px'; m.style.left = Math.max(12, r.left + scrollX) + 'px';
+  m.classList.toggle('hidden');
+  m.querySelectorAll('[data-a]').forEach((b) => b.onclick = async () => {
+    m.classList.add('hidden');
+    if (b.dataset.a === 'saved') goSaved();
+    if (b.dataset.a === 'upgrade') login({ allowGuest: false, signup: true, reason: 'צרו חשבון. היעדים ששמרתם יישארו.' }).catch(() => {});
+    if (b.dataset.a === 'verify') { try { await resendVerification(); toast('שלחנו שוב מייל אימות'); } catch (e) { toast('נסו שוב בעוד כמה דקות'); } }
+    if (b.dataset.a === 'out') { await logout(); clearLocalSaved(); toast('יצאתם מהחשבון'); }
+  });
+}
+$('delAcc').onclick = async () => {
+  if (!confirm('למחוק את החשבון שלך? כל ההמלצות שכתבת, הדיווחים והיעדים השמורים יימחקו לצמיתות. אי אפשר לבטל את זה.')) return;
+  try {
+    if (user.isAnonymous || !user.emailVerified) { await deleteDoc(doc(db, 'saved', user.uid)).catch(() => {}); await removeUser(); }
+    else { await api('/account/delete', {}); await logout(); }
+    clearLocalSaved(); toast('החשבון והמידע שלך נמחקו');
+  } catch (e) { toast(e.code === 'auth/requires-recent-login' ? 'מטעמי אבטחה, התחברו מחדש ונסו שוב' : e.message); }
+};
+
+// ================= יעדים שמורים =================
+function drawSaved(list) {
+  const box = $('savedSec'); if (!box) return;
+  box.classList.toggle('hidden', !list.length);
+  $('savedList').innerHTML = list.map((s) => `<a class="sv" href="#d=${esc(s.id)}" data-sid="${esc(s.id)}">${s.cc ? flag(s.cc) : ''}<span><b>${esc(s.name)}</b><small>${esc(s.country)}${s.from ? ' · ' + esc(fmt(s.from)) : ''}</small></span>
+    <button class="svx" data-unsave="${esc(s.id)}" aria-label="הסרה מהשמורים">✕</button></a>`).join('');
+  $('savedList').querySelectorAll('[data-sid]').forEach((a) => a.onclick = (e) => {
+    if (e.target.closest('[data-unsave]')) { e.preventDefault(); const s = list.find((x) => x.id === e.target.closest('[data-unsave]').dataset.unsave); toggleSaved(s); return; }
+    e.preventDefault(); const s = list.find((x) => x.id === a.dataset.sid);
+    if (s.from) { $('from').value = s.from; $('to').value = s.to || s.from; }
+    openById(s.id);
+  });
+}
+onSaved((l) => { drawSaved(l); drawSaveBtn(); });
+function goSaved() {
+  if ($('destPage').classList.contains('hidden')) $('savedSec').scrollIntoView({ behavior: 'smooth' });
+  else { $('home').click(); setTimeout(() => $('savedSec').scrollIntoView({ behavior: 'smooth' }), 50); }
+  if (!savedList().length) toast('עוד לא שמרתם יעדים. לחצו על ♡ בדף של יעד');
+}
+function drawSaveBtn() {
+  const b = $('saveDest'); if (!b || !dest) return;
+  const on = isSaved(dest.id);
+  b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+  b.innerHTML = `<span aria-hidden="true">${on ? '♥' : '♡'}</span> ${on ? 'נשמר' : 'שמירה'}`;
+}
+$('saveDest').onclick = async () => {
+  if (!user) { try { await login({ reason: 'כדי לשמור את היעד גם לפעם הבאה' }); } catch (e) { return; } }
+  const on = await toggleSaved({ id: dest.id, name: dest.name, country: dest.country, cc: dest.cc, from: $('from').value, to: $('to').value, trip: F.trip });
+  toast(on ? `${dest.name} נשמר ביעדים שלך ♥` : 'הוסר מהשמורים');
+};
+
+// ================= תמונות =================
+// 1. Pexels דרך השרת (צילום גדול ומקצועי)  2. Wikimedia כגיבוי
+// מעירים את השרת ברקע כבר כשהאתר נפתח (בתוכנית החינמית הוא נרדם כשאין שימוש)
+fetch(SERVER_URL + '/').catch(() => {});
+const photoKey = (q, c) => (q + '-' + (c || '')).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120) || 'x';
+async function photoFor(en, country) {
+  // 1. תמונה ששמרנו בעבר: ישר ממסד הנתונים, בלי לחכות לשרת
+  try {
+    const k = photoKey(en, country);
+    const meta = await getDoc(doc(db, 'photoCache', k));
+    if (meta.exists() && !meta.data().none) {
+      const b = await getDoc(doc(db, 'photoBlobs', k));
+      if (b.exists() && b.data().data) return 'data:image/jpeg;base64,' + b.data().data;
+    }
+  } catch (e) {}
+  // 2. יעד חדש: מבקשים מהשרת (עד 7 שניות; אם הוא עוד מתעורר, ממשיכים לגיבוי והשרת ישמור לפעם הבאה)
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 7000);
+    const r = await fetch(`${SERVER_URL}/photo?q=${encodeURIComponent(en)}&c=${encodeURIComponent(country || '')}`, { signal: ctl.signal });
+    clearTimeout(t);
+    if (r.ok) { const d = await r.json(); if (d.src) return d.src; }
+  } catch (e) {}
+  try {
+    const v = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail&pithumbsize=2000&titles=${encodeURIComponent(en)}&redirects=1&format=json&origin=*`)).json();
+    const p = Object.values(v.query.pages)[0];
+    if (p.thumbnail) return p.thumbnail.source;
+  } catch (e) {}
+  return null;
+}
+function paint(el, en, country, alt, fallback = 'see') {
+  el.innerHTML = mini(fallback); // איור זמני עד שהצילום נטען (או אם אין צילום)
+  photoFor(en, country).then((src) => {
+    if (!src) return;
+    const img = new Image(); img.alt = alt || ''; img.onload = () => { el.innerHTML = ''; el.appendChild(img); }; img.src = src;
+  });
+}
+const flag = (cc) => cc ? `<img src="https://flagcdn.com/w80/${cc.toLowerCase()}.png" alt="דגל">` : '';
+
+// ================= דף הבית =================
+const POPULAR = [
+  { id: 3169070, he: 'רומא', en: 'Rome', country: 'Italy', heC: 'איטליה', cc: 'it' },
+  { id: 2988507, he: 'פריז', en: 'Paris', country: 'France', heC: 'צרפת', cc: 'fr' },
+  { id: 1609350, he: 'בנגקוק', en: 'Bangkok', country: 'Thailand', heC: 'תאילנד', cc: 'th' },
+  { id: 5128581, he: 'ניו יורק', en: 'New York City', country: 'United States', heC: 'ארצות הברית', cc: 'us' },
+  { id: 2643743, he: 'לונדון', en: 'London', country: 'United Kingdom', heC: 'בריטניה', cc: 'gb' },
+  { id: 3128760, he: 'ברצלונה', en: 'Barcelona', country: 'Spain', heC: 'ספרד', cc: 'es' },
+];
+paint($('landArt'), 'travel landscape', '', '', 'beach');
+$('pop').innerHTML = POPULAR.map((p, i) => `<button class="pc" data-i="${i}"><div class="art" id="pa${i}"></div><div class="t"><b>${p.he}</b><span><span class="flag">${flag(p.cc)}</span>${p.heC}</span></div></button>`).join('');
+POPULAR.forEach((p, i) => paint($('pa' + i), p.en, p.country));
+document.querySelectorAll('.pc').forEach((b) => b.onclick = () => openById(POPULAR[+b.dataset.i].id));
+
+// ================= תכנון: יעד ← תאריכים ← אופי טיול ← העדפות =================
+const W = { id: null, trip: '', cat: '', prefs: new Set() };
+let step = 1, timer, lastList = [];
+function wzShow() {
+  document.querySelectorAll('[data-step]').forEach((x) => x.classList.toggle('hidden', +x.dataset.step !== step));
+  document.querySelectorAll('.wz-steps span').forEach((x) => { const n = +x.dataset.s; x.classList.toggle('on', n === step); x.classList.toggle('done', n < step); });
+  $('wzBack').style.visibility = step > 1 ? 'visible' : 'hidden';
+  $('wzNext').textContent = step < 4 ? 'המשך' : 'הצג המלצות';
+  $('wzCount').textContent = `שלב ${step} מתוך 4`;
+  chips($('wTrip'), TRIPS, (k) => W.trip === k, (v) => { W.trip = v; wzShow(); }, 'עוד לא יודעים');
+  chips($('wCat'), CATS, (k) => W.cat === k, (v) => { W.cat = v; wzShow(); }, 'הכל');
+  chipsGrouped($('wPref'), (k) => W.prefs.has(k), (v) => { W.prefs.has(v) ? W.prefs.delete(v) : W.prefs.add(v); wzShow(); });
+}
+function pick(p) {
+  W.id = p.id;
+  $('sug').classList.add('hidden');
+  $('q').value = p.name;
+  $('picked').innerHTML = `<span class="flag" style="box-shadow:0 0 0 1px #cfe0dc">${flag(p.country_code)}</span>${esc(p.name)}${p.country ? ', ' + esc(p.country) : ''}<button type="button" id="unpick">שינוי</button>`;
+  $('picked').classList.remove('hidden');
+  $('unpick').onclick = () => { W.id = null; $('picked').classList.add('hidden'); $('q').value = ''; $('q').focus(); };
+}
+$('q').addEventListener('input', () => {
+  W.id = null; $('picked').classList.add('hidden');
+  clearTimeout(timer);
+  const q = $('q').value.trim();
+  if (q.length < 2) { $('sug').classList.add('hidden'); return; }
+  timer = setTimeout(async () => {
+    try {
+      const d = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=he&format=json`)).json();
+      lastList = d.results || [];
+      $('sug').innerHTML = lastList.map((p, i) => `<li><button type="button" data-i="${i}"><span class="flag" style="box-shadow:0 0 0 1px #ddd">${flag(p.country_code)}</span>${esc(p.name)} <small>${esc([p.admin1, p.country].filter(Boolean).join(', '))}</small></button></li>`).join('') || '<li><small>לא נמצא יעד</small></li>';
+      $('sug').classList.remove('hidden');
+      $('sug').querySelectorAll('[data-i]').forEach((b) => b.onclick = () => pick(lastList[+b.dataset.i]));
+    } catch (e) {}
+  }, 300);
+});
+$('wzNext').onclick = () => {
+  if (step === 1 && !W.id) { if (lastList[0]) pick(lastList[0]); else { $('q').focus(); toast('הקלידו יעד ובחרו מהרשימה'); return; } }
+  if (step === 2 && !$('from').value) { toast('בחרו תאריך התחלה'); return; }
+  if (step < 4) { step++; wzShow(); return; }
+  openById(W.id, true);
+};
+$('wzBack').onclick = () => { if (step > 1) { step--; wzShow(); } };
+
+async function openById(id, fromWz) {
+  showLoader();
+  try {
+    const [he, en] = await Promise.all([
+      fetch(`https://geocoding-api.open-meteo.com/v1/get?id=${id}&language=he`).then((r) => r.json()),
+      fetch(`https://geocoding-api.open-meteo.com/v1/get?id=${id}&language=en`).then((r) => r.json()),
+    ]);
+    dest = { key: 'g' + id, id, name: he.name, enName: en.name, country: he.country || '', countryEn: en.country || '', cc: he.country_code || '', lat: he.latitude, lon: he.longitude };
+    location.hash = 'd=' + id;
+    showDest(fromWz);
+  } catch (e) { toast('לא הצלחתי לטעון את היעד'); }
+  finally { setTimeout(hideLoader, 450); }
+}
+(function fromHash() { const m = location.hash.match(/d=(\d+)/); if (m) openById(m[1]); })();
+$('home').onclick = (e) => { e.preventDefault(); history.replaceState(null, '', location.pathname); $('destPage').classList.add('hidden'); $('landing').classList.remove('hidden'); scrollTo(0, 0); };
+
+// ================= תאריכים =================
+const iso = (d) => d.toISOString().slice(0, 10);
+function sync(fromBar) {
+  const f = fromBar ? $('from2').value : $('from').value;
+  let t = fromBar ? $('to2').value : $('to').value;
+  if (f && (!t || t < f)) t = f;
+  $('from').value = $('from2').value = f; $('to').value = $('to2').value = t;
+}
+['from', 'to'].forEach((id) => $(id).addEventListener('change', () => sync(false)));
+['from2', 'to2'].forEach((id) => $(id).addEventListener('change', () => { sync(true); loadWeather(); render(); }));
+function months() {
+  const f = $('from').value, t = $('to').value || f;
+  if (!f) return null;
+  const s = new Date(f), e = new Date(t), set = new Set(), d = new Date(s.getFullYear(), s.getMonth(), 1);
+  while (d <= e && set.size < 12) { set.add(d.getMonth() + 1); d.setMonth(d.getMonth() + 1); }
+  return set;
+}
+const fmt = (s) => { const d = new Date(s); return d.getDate() + ' ב' + MONTHS[d.getMonth()]; };
+
+
+// ================= כפתורי סינון =================
+let openP='';
+document.querySelectorAll('.fbtn').forEach(b=>b.onclick=e=>{e.stopPropagation();openP=openP===b.dataset.p?'':b.dataset.p;showPanels()});
+function showPanels(){document.querySelectorAll('.fbtn').forEach(b=>{b.classList.toggle('open',b.dataset.p===openP);b.setAttribute('aria-expanded',b.dataset.p===openP)});document.querySelectorAll('[data-panel]').forEach(p=>p.classList.toggle('hidden',p.dataset.panel!==openP))}
+document.addEventListener('click',e=>{if(openP&&!e.composedPath().some(n=>n.classList&&n.classList.contains('fbar'))){openP='';showPanels()}});
+function labels(){
+  const set=(id,p,txt)=>{document.getElementById(id).textContent=txt;document.querySelector(`.fbtn[data-p="${p}"]`).classList.toggle('has',!!txt)};
+  set('lbTrip','trip',F.trip?T[F.trip]:'');set('lbCat','cat',F.cat?T[F.cat]:'');
+  set('lbPref','pref',F.prefs.size===1?T[[...F.prefs][0]]:F.prefs.size?F.prefs.size+' נבחרו':'');
+  const f=document.getElementById('from').value,t=document.getElementById('to').value;
+  document.getElementById('lbDates').textContent=f?`${new Date(f).getDate()}.${new Date(f).getMonth()+1} – ${new Date(t||f).getDate()}.${new Date(t||f).getMonth()+1}`:'';
+  document.getElementById('clearF').classList.toggle('hidden',!(F.trip||F.cat||F.prefs.size));
+}
+
+// ================= דף יעד =================
+function showDest(fromWz) {
+  sync(false);
+  F = fromWz ? { trip: W.trip, cat: W.cat, prefs: new Set(W.prefs) } : { trip: '', cat: '', prefs: new Set() };
+  $('landing').classList.add('hidden'); $('destPage').classList.remove('hidden'); $('sug').classList.add('hidden');
+  $('dName').textContent = dest.name; $('wName').textContent = dest.name;
+  $('dCountry').textContent = dest.country; $('dFlag').innerHTML = flag(dest.cc);
+  paint($('destArt'), dest.enName, dest.countryEn, 'צילום של ' + dest.name);
+  drawSaveBtn();
+  scrollTo(0, 0);
+  loadWeather(); loadReviews(); loadWeb(); render();
+}
+
+async function loadWeather() {
+  const f = $('from').value, t = $('to').value || f;
+  $('dSub').textContent = (f ? `${fmt(f)} – ${fmt(t)}` : 'בחרו תאריכים') + (F.trip ? ' · ' + T[F.trip] : '');
+  if (!f) return;
+  ['fDay', 'fNight', 'fRain'].forEach((k) => $(k).classList.add('ld'));
+  const back = (s, n) => { const d = new Date(s); d.setFullYear(d.getFullYear() - n); return iso(d); };
+  let n = 1, s = back(f, 1), e = back(t, 1);
+  if (new Date(e) > new Date(Date.now() - 7 * 864e5)) { n = 2; s = back(f, 2); e = back(t, 2); }
+  if (new Date(e) - new Date(s) > 92 * 864e5) { const d = new Date(s); d.setDate(d.getDate() + 92); e = iso(d); }
+  try {
+    const d = (await (await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${dest.lat}&longitude=${dest.lon}&start_date=${s}&end_date=${e}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`)).json()).daily;
+    const avg = (a) => Math.round(a.filter((x) => x != null).reduce((x, y) => x + y, 0) / a.length);
+    const night = avg(d.temperature_2m_min), rainy = d.precipitation_sum.filter((x) => x > 1).length, days = d.time.length;
+    $('fDay').textContent = avg(d.temperature_2m_max) + '°'; $('fNight').textContent = night + '°';
+    $('fWear').textContent = night < 8 ? 'מעיל חם בערב' : night < 15 ? 'ז׳קט קל בערב' : 'בגדים קלים';
+    $('fRain').textContent = `${rainy} מתוך ${days}`; $('fRainT').textContent = rainy > days / 3 ? 'כדאי מטריה' : 'רוב הימים יבשים';
+  } catch (err) { $('fDay').textContent = $('fNight').textContent = $('fRain').textContent = '–'; }
+  ['fDay', 'fNight', 'fRain'].forEach((k) => $(k).classList.remove('ld'));
+}
+
+let loadingR = false, loadingW = false;
+async function loadReviews() {
+  reviews = []; loadingR = true; render();
+  try {
+    const q = query(collection(db, 'reviews'), where('destKey', '==', dest.key), where('status', '==', 'approved'));
+    reviews = (await getDocs(q)).docs.map((d) => ({ id: d.id, tags: [], ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  } catch (e) {}
+  loadingR = false; render();
+}
+
+// ================= סינון =================
+function chips(el, list, isOn, onClick, all) {
+  el.innerHTML = (all ? `<button type="button" class="chip ${isOn('') ? 'on' : ''}" aria-pressed="${isOn('')}" data-v="">${all}</button>` : '') +
+    list.map(([k, v]) => `<button type="button" class="chip ${isOn(k) ? 'on' : ''}" aria-pressed="${isOn(k)}" data-v="${k}">${v}</button>`).join('');
+  el.querySelectorAll('.chip').forEach((c) => c.onclick = () => onClick(c.dataset.v));
+}
+function chipsGrouped(el, isOn, onClick) {
+  el.innerHTML = PREF_GROUPS.map(([g, list]) => `<div class="cgroup"><div class="cg-title">${g}</div><div class="chips">${
+    list.map(([k, v]) => `<button type="button" class="chip ${isOn(k) ? 'on' : ''}" aria-pressed="${isOn(k)}" data-v="${k}">${v}</button>`).join('')}</div></div>`).join('');
+  el.querySelectorAll('.chip').forEach((c) => c.onclick = () => onClick(c.dataset.v));
+}
+function drawFilters() {
+  chips($('tripChips'), TRIPS, (k) => F.trip === k, (v) => { F.trip = v; openP = ''; showPanels(); loadWeather(); render(); }, 'הכל');
+  chips($('catChips'), CATS, (k) => F.cat === k, (v) => { F.cat = v; openP = ''; showPanels(); render(); }, 'הכל');
+  chipsGrouped($('prefChips'), (k) => F.prefs.has(k), (v) => { F.prefs.has(v) ? F.prefs.delete(v) : F.prefs.add(v); render(); });
+  labels();
+}
+$('clearF').onclick = () => { F = { trip: '', cat: '', prefs: new Set() }; loadWeather(); render(); };
+const passR = (r) => (!F.trip || r.trip === F.trip) && (!F.cat || r.cat === F.cat) && [...F.prefs].every((p) => (r.tags || []).includes(p));
+const placeTags = (t) => Object.keys(KW).filter((k) => KW[k].test(t));
+const passW = (w) => (!F.cat || w.cat === F.cat) && [...F.prefs].every((p) => placeTags(w.text).includes(p));
+
+function rv(r, inS) {
+  const tags = [r.trip && `<span class="tag j">${T[r.trip]}</span>`, r.cat && `<span class="tag">${T[r.cat]}</span>`, ...(r.tags || []).map((t) => `<span class="tag">${T[t] || ''}</span>`)].filter(Boolean).join('');
+  return `<article class="rv"><div class="top"><div class="who"><span class="av">${esc((r.userName || '?')[0])}</span><div><b>${esc(r.userName)}</b>
+    <small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>מטייל מאומת</small></div></div>
+    <span class="stars" role="img" aria-label="דירוג ${r.rating} מתוך 5">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span></div>
+    <h4>${r.place ? esc(r.place) : (T[r.cat] || 'טיפ')}</h4><p>${esc(r.text)}</p>${videoButton(r.video)}<div class="tags">${tags}</div>
+    <div class="foot"><span>${inS ? 'בעונה שלכם · ' : ''}${MONTHS[r.month - 1]} ${r.year}</span><button class="lnk" data-rep="${r.id}">דיווח</button></div></article>`;
+}
+
+function render() {
+  if (!dest) return;
+  drawFilters();
+  const m = months();
+  const allApproved = reviews;
+  const all = reviews.filter(passR);
+  const sea = m ? all.filter((r) => m.has(r.month)) : all, oth = m ? all.filter((r) => !m.has(r.month)) : [];
+  const active = (F.trip ? 1 : 0) + (F.cat ? 1 : 0) + F.prefs.size;
+  $('fCount').textContent = allApproved.length;
+  $('fCountT').textContent = `${(m ? allApproved.filter((x) => m.has(x.month)) : allApproved).length} מהעונה שלכם`;
+  $('revSub').textContent = `${sea.length} המלצות מהחודשים של הטיול שלכם${active ? ` · ${active} סינונים פעילים` : ''}`;
+  $('revMain').innerHTML = loadingR ? loaderBlock('קוראים ביקורות של מטיילים…') : sea.map((r) => rv(r, !!m)).join('') ||
+    `<div class="empty" style="grid-column:1/-1"><b>אין עדיין המלצות שמתאימות</b>${active ? 'נסו להסיר חלק מהסינונים, או ' : ''}היו הראשונים לכתוב על ${esc(dest.name)}</div>`;
+  $('moreBox').classList.toggle('hidden', !oth.length);
+  $('moreSum').textContent = `עוד ${oth.length} המלצות מעונות אחרות ↓`;
+  $('revOther').innerHTML = oth.map((r) => rv(r, false)).join('');
+  document.querySelectorAll('[data-rep]').forEach((b) => b.onclick = () => report(b.dataset.rep));
+
+  const W = web.filter(passW);
+  $('webSub').textContent = web.length ? `${W.length} מקומות${active ? ' שמתאימים לסינון' : ''}` : '';
+  $('web').innerHTML = loadingW ? loaderBlock('אוספים המלצות מהרשת…') : W.slice(0, 30).map((w) => {
+    const g = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(w.name + ' ' + dest.enName);
+    const diet = placeTags(w.text).filter((t) => ['kosher', 'vegan', 'vegetarian', 'glutenfree', 'halal'].includes(t)).map((t) => ' · ' + T[t]).join('');
+    return `<article class="pl"><div class="ph">${mini(w.cat)}</div><span class="k">${T[w.cat]}${diet}</span><h4>${esc(w.name)}</h4>${w.text ? `<p>${esc(w.text.slice(0, 240))}${w.text.length > 240 ? '…' : ''}</p>` : ''}
+      <button class="revbtn" data-q="${esc(w.name + ', ' + dest.enName)}"><span aria-hidden="true">★</span> דירוג וביקורות</button>
+      <div class="acts"><a href="${g}" target="_blank" rel="noopener">ביקורות בגוגל</a><a href="https://www.tripadvisor.com/Search?q=${encodeURIComponent(w.name + ' ' + dest.enName)}" target="_blank" rel="noopener">טריפאדווייזר</a>${/^https?:\/\//.test(w.url) ? `<a href="${esc(w.url)}" target="_blank" rel="noopener">אתר</a>` : ''}
+      <button data-w="${esc(w.name)}" data-c="${w.cat}">כתבו המלצה</button></div></article>`;
+  }).join('') || `<div class="empty" style="grid-column:1/-1"><b>${web.length ? 'לא נמצאו מקומות' : 'אין מידע מפורט ליעד הזה'}</b>${web.length ? 'נסו סינון אחר' : 'ביעדים גדולים המידע מחולק לשכונות, ראו בקישור למטה'}</div>`;
+  document.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { $('fPlace').value = b.dataset.w; $('fCat').value = b.dataset.c; $('s-write').scrollIntoView({ behavior: 'smooth' }); });
+}
+
+async function report(reviewId) {
+  if (!user || user.isAnonymous) { try { await login({ allowGuest: false, reason: 'כדי לדווח צריך חשבון' }); } catch (e) { return; } }
+  const reason = prompt('מה הבעיה בהמלצה? (למשל: פרסומת, מידע לא נכון, תוכן פוגעני, פגיעה בפרטיות, לשון הרע או הפרת זכויות יוצרים)');
+  if (!reason) return;
+  try { await addDoc(collection(db, 'reports'), { reviewId, uid: auth.currentUser.uid, reason: reason.slice(0, 300), createdAt: serverTimestamp() }); toast('תודה, הדיווח נשלח לבדיקה'); }
+  catch (e) { toast('לא הצלחתי לשלוח את הדיווח'); }
+}
+
+// ================= מקומות מהרשת (Wikivoyage) =================
+function splitParams(s) {
+  const parts = []; let cur = '', depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    const two = s.substr(i, 2);
+    if (two === '{{' || two === '[[') { depth++; cur += two; i++; continue; }
+    if ((two === '}}' || two === ']]') && depth > 0) { depth--; cur += two; i++; continue; }
+    if (s[i] === '|' && depth === 0) { parts.push(cur); cur = ''; continue; }
+    cur += s[i];
+  }
+  parts.push(cur);
+  const p = {};
+  parts.slice(1).forEach((x) => { const k = x.indexOf('='); if (k > 0) p[x.slice(0, k).trim().toLowerCase()] = x.slice(k + 1).trim(); });
+  return p;
+}
+function cleanWiki(t) {
+  let s = String(t || '');
+  for (let n = 0; n < 5; n++) s = s.replace(/\{\{[^{}]*\}\}/g, '');
+  return s.replace(/<ref[^>]*>[\s\S]*?<\/ref>|<ref[^>]*\/>/g, '').replace(/<[^>]+>/g, '')
+    .replace(/\[\[(?:[^\]|]*\|)?([^\]]+)\]\]/g, '$1').replace(/\[https?:\/\/\S+\s+([^\]]+)\]/g, '$1')
+    .replace(/\[https?:\/\/\S+\]/g, '').replace(/'{2,}/g, '').replace(/\s+/g, ' ').trim();
+}
+export function parseListings(wt) {
+  const out = [];
+  const re = /\{\{\s*(see|do|eat|drink|buy|sleep|listing)\s*\|/gi;
+  let m;
+  while ((m = re.exec(wt))) {
+    let i = m.index + 2, depth = 1;
+    while (i < wt.length && depth > 0) { if (wt.startsWith('{{', i)) { depth++; i += 2; } else if (wt.startsWith('}}', i)) { depth--; i += 2; } else i++; }
+    const p = splitParams(wt.slice(m.index + 2, i - 2));
+    let type = m[1].toLowerCase();
+    if (type === 'listing') type = (p.type || '').toLowerCase();
+    const name = cleanWiki(p.name), text = cleanWiki(p.content || p.description || '');
+    re.lastIndex = i;
+    if (!name) continue;
+    const cat = ['see', 'do', 'eat', 'drink', 'buy', 'sleep'].includes(type) ? catFor(type, name, text) : null;
+    if (cat) out.push({ cat, name, text, url: (p.url || '').trim() });
+  }
+  return out;
+}
+async function loadWeb() {
+  web = [];
+  $('wvLink').href = 'https://en.wikivoyage.org/wiki/' + encodeURIComponent(dest.enName.replace(/ /g, '_'));
+  loadingW = true; render();
+  try {
+    const d = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=parse&page=${encodeURIComponent(dest.enName)}&prop=wikitext&redirects=1&format=json&formatversion=2&origin=*`)).json();
+    if (d.parse) web = parseListings(d.parse.wikitext);
+  } catch (e) {}
+  loadingW = false; render();
+}
+
+// ================= טופס המלצה =================
+$('fCat').innerHTML = CATS.map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+$('fTrip').innerHTML = TRIPS.map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+$('fMonth').innerHTML = MONTHS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+$('fMonth').value = new Date().getMonth() + 1;
+const Y = new Date().getFullYear();
+$('fYear').innerHTML = Array.from({ length: 11 }, (_, i) => `<option>${Y - i}</option>`).join('');
+const fTags = new Set();
+function drawTags() { chipsGrouped($('fTags'), (k) => fTags.has(k), (v) => { fTags.has(v) ? fTags.delete(v) : fTags.add(v); drawTags(); }); }
+drawTags();
+function drawRate() {
+  $('rate').innerHTML = [1, 2, 3, 4, 5].map((i) => `<button type="button" class="${i <= rating ? 'on' : ''}" data-r="${i}" aria-label="${i} כוכבים">★</button>`).join('');
+  $('rate').querySelectorAll('button').forEach((b) => b.onclick = () => { rating = +b.dataset.r; drawRate(); });
+}
+drawRate();
+const fmsg = (t, c = 'info') => $('fMsg').innerHTML = t ? `<div class="msg ${c}">${esc(t)}</div>` : '';
+
+async function api(path, body) {
+  const token = await auth.currentUser.getIdToken();
+  const r = await fetch(SERVER_URL + path, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'שגיאה בשרת');
+  return d;
+}
+
+$('send').onclick = async () => {
+  const review = {
+    dest: dest.name, destKey: dest.key, cat: $('fCat').value, trip: $('fTrip').value, tags: [...fTags],
+    place: $('fPlace').value, text: $('fText').value, rating, month: +$('fMonth').value, year: +$('fYear').value,
+  };
+  if (review.text.trim().length < 30) { fmsg('ההמלצה קצרה מדי – כתבו לפחות 30 תווים', 'err'); return; }
+  const vurl = $('fVideo').value.trim();
+  if (vurl && parseVideo(vurl) === false) { fmsg('הקישור לסרטון לא נראה תקין. העתיקו אותו מכפתור "שיתוף" בטיקטוק או באינסטגרם.', 'err'); $('fVideo').focus(); return; }
+  review.videoUrl = vurl;
+  if (!$('fAgree').checked) { fmsg('כדי לשלוח, סמנו את תיבת ההצהרה ואת ההסכמה לתנאי השימוש', 'err'); $('fAgree').focus(); return; }
+  review.agree = true;
+  if (!window.PublicKeyCredential) { fmsg('הדפדפן הזה לא תומך בטביעת אצבע / Face ID. נסו מהטלפון בדפדפן מעודכן.', 'err'); return; }
+  if (!user || user.isAnonymous) { try { await login({ allowGuest: false, reason: 'כדי לכתוב המלצה צריך חשבון, כדי שנדע שאתם אנשים אמיתיים' }); } catch (e) { return; } }
+  if (!auth.currentUser.emailVerified) { await auth.currentUser.reload().catch(() => {}); }
+  if (!auth.currentUser.emailVerified) { fmsg('כמעט סיימנו: אשרו את כתובת המייל דרך הקישור ששלחנו אליכם, ואז שלחו שוב. לא קיבלתם? לחצו על שם החשבון למעלה ← "שליחת מייל אימות שוב".', 'err'); return; }
+  $('send').disabled = true; $('send').classList.add('busy');
+  try {
+    fmsg('מתחבר… (בפעם הראשונה זה יכול לקחת עד דקה)');
+    const st = await api('/passkey/status');
+    if (!st.registered) {
+      fmsg('פעם ראשונה: מאשרים את הטלפון שלכם עם טביעת אצבע או Face ID');
+      const opts = await api('/passkey/register/options', {});
+      await api('/passkey/register/verify', await startRegistration(opts));
+    }
+    fmsg('מאשרים את ההמלצה עם טביעת אצבע או Face ID');
+    const assertion = await startAuthentication(await api('/review/options', {}));
+    await api('/review/submit', { assertion, review });
+    fmsg('תודה. ההמלצה נשלחה ותופיע באתר אחרי אישור.', 'ok');
+    $('fText').value = ''; $('fPlace').value = ''; $('fVideo').value = ''; $('fAgree').checked = false; fTags.clear(); drawTags();
+  } catch (e) {
+    fmsg(e.name === 'NotAllowedError' ? 'האימות בוטל. נסו שוב.' : e.message, 'err');
+  } finally { $('send').disabled = false; $('send').classList.remove('busy'); }
+};
+
+// תאריכי ברירת מחדל: שבוע, בעוד חודש
+(() => { const a = new Date(); a.setMonth(a.getMonth() + 1); const b = new Date(a); b.setDate(b.getDate() + 7); $('from').value = iso(a); $('to').value = iso(b); sync(false); })();
+wzShow();
+
+// שורת "איזה טיול אתם מתכננים?"
+$('inspo').innerHTML = TRIPS.slice(0, 8).map(([k, v]) => `<button type="button" class="ins" data-t="${k}"><span class="ins-ph">${mini(TRIP_ICON[k])}</span><b>${v}</b></button>`).join('');
+document.querySelectorAll('.ins').forEach((b) => b.onclick = () => { W.trip = b.dataset.t; wzShow(); $('wz').scrollIntoView({ behavior: 'smooth', block: 'center' }); toast('נבחר: ' + T[b.dataset.t]); });
+
+// רמז גלילה בתחתית התמונה
+document.querySelectorAll('.cue').forEach((c) => c.onclick = () => document.getElementById(c.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' }));
+addEventListener('scroll', () => document.querySelectorAll('.cue').forEach((c) => c.classList.toggle('gone', scrollY > 60)), { passive: true });
