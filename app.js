@@ -97,8 +97,15 @@ $('saveDest').onclick = async () => {
 // מעירים את השרת ברקע כבר כשהאתר נפתח (בתוכנית החינמית הוא נרדם כשאין שימוש)
 fetch(SERVER_URL + '/').catch(() => {});
 const photoKey = (q, c) => (q + '-' + (c || '')).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120) || 'x';
-async function photoFor(en, country) {
-  // 1. תמונה ששמרנו בעבר: ישר ממסד הנתונים, בלי לחכות לשרת
+async function wvPhoto(en) {
+  try {
+    const v = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail&pithumbsize=2000&titles=${encodeURIComponent(en)}&redirects=1&format=json&origin=*`)).json();
+    const p = Object.values(v.query.pages)[0];
+    if (p.thumbnail && p.thumbnail.width >= 900) return p.thumbnail.source;
+  } catch (e) {}
+  return null;
+}
+async function cachedPhoto(en, country) {
   try {
     const k = photoKey(en, country);
     const meta = await getDoc(doc(db, 'photoCache', k));
@@ -107,25 +114,32 @@ async function photoFor(en, country) {
       if (b.exists() && b.data().data) return 'data:image/jpeg;base64,' + b.data().data;
     }
   } catch (e) {}
-  // 2. יעד חדש: מבקשים מהשרת (עד 7 שניות; אם הוא עוד מתעורר, ממשיכים לגיבוי והשרת ישמור לפעם הבאה)
+  return null;
+}
+async function serverPhoto(en, country) {
   try {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 7000);
     const r = await fetch(`${SERVER_URL}/photo?q=${encodeURIComponent(en)}&c=${encodeURIComponent(country || '')}`, { signal: ctl.signal });
     clearTimeout(t);
     if (r.ok) { const d = await r.json(); if (d.src) return d.src; }
   } catch (e) {}
-  try {
-    const v = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail&pithumbsize=2000&titles=${encodeURIComponent(en)}&redirects=1&format=json&origin=*`)).json();
-    const p = Object.values(v.query.pages)[0];
-    if (p.thumbnail) return p.thumbnail.source;
-  } catch (e) {}
   return null;
 }
-function paint(el, en, country, alt, fallback = 'see') {
-  el.innerHTML = mini(fallback); // איור זמני עד שהצילום נטען (או אם אין צילום)
-  photoFor(en, country).then((src) => {
-    if (!src) return;
-    const img = new Image(); img.alt = alt || ''; img.onload = () => { el.innerHTML = ''; el.appendChild(img); }; img.src = src;
+// יעד: קודם הבאנר של היעד מוויקימסע (צילום של העיר עצמה, נטען מהר), ואם אין – צילום מ-Pixabay
+async function photoFor(en, country, hero) {
+  if (hero) return (await cachedPhoto(en, country)) || (await serverPhoto(en, country));
+  return (await wvPhoto(en)) || (await cachedPhoto(en, country)) || (await serverPhoto(en, country));
+}
+function paint(el, en, country, alt, fallback = 'see', hero = false) {
+  // בזמן הטעינה: רקע טורקיז חלק (בלי איור שמסתיר את הכותרת)
+  el.innerHTML = '<div class="artwait" aria-hidden="true"></div>';
+  const mine = (el._p = (el._p || 0) + 1);
+  photoFor(en, country, hero).then((src) => {
+    if (mine !== el._p) return;
+    if (!src) { el.innerHTML = '<div class="artwait done" aria-hidden="true"></div>'; return; }
+    const img = new Image(); img.alt = alt || ''; img.decoding = 'async';
+    img.onload = () => { if (mine !== el._p) return; el.innerHTML = ''; el.appendChild(img); requestAnimationFrame(() => img.classList.add('in')); };
+    img.src = src;
   });
 }
 const flag = (cc) => cc ? `<img src="https://flagcdn.com/w80/${cc.toLowerCase()}.png" alt="דגל">` : '';
@@ -139,7 +153,7 @@ const POPULAR = [
   { id: 2643743, he: 'לונדון', en: 'London', country: 'United Kingdom', heC: 'בריטניה', cc: 'gb' },
   { id: 3128760, he: 'ברצלונה', en: 'Barcelona', country: 'Spain', heC: 'ספרד', cc: 'es' },
 ];
-paint($('landArt'), 'waytip hero', '', '', 'beach');
+paint($('landArt'), 'waytip hero', '', '', 'beach', true);
 $('pop').innerHTML = POPULAR.map((p, i) => `<button class="pc" data-i="${i}"><div class="art" id="pa${i}"></div><div class="t"><b>${p.he}</b><span><span class="flag">${flag(p.cc)}</span>${p.heC}</span></div></button>`).join('');
 POPULAR.forEach((p, i) => paint($('pa' + i), p.en, p.country));
 document.querySelectorAll('.pc').forEach((b) => b.onclick = () => openById(POPULAR[+b.dataset.i].id));
@@ -331,8 +345,9 @@ function render() {
   $('revOther').innerHTML = oth.map((r) => rv(r, false)).join('');
   document.querySelectorAll('[data-rep]').forEach((b) => b.onclick = () => report(b.dataset.rep));
 
-  const W = web.filter(passW);
-  $('webSub').textContent = web.length ? `${W.length} מקומות${active ? ' שמתאימים לסינון' : ''}` : '';
+  let W = web.filter(passW), relaxed = false;
+  if (!W.length && web.length && (F.prefs.size || F.cat)) { W = web.slice(); relaxed = true; }
+  $('webSub').textContent = !web.length ? '' : relaxed ? `לא מצאנו מקומות שמתאימים בדיוק לסינון, אז הנה כל ${W.length} המקומות המומלצים. בדקו מול המקום אם הוא מתאים לכם.` : `${W.length} מקומות${active ? ' שמתאימים לסינון' : ''}`;
   $('web').innerHTML = loadingW ? loaderBlock('אוספים המלצות מהרשת…') : W.slice(0, 30).map((w) => {
     const g = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(w.name + ' ' + dest.enName);
     const diet = placeTags(w.text).filter((t) => ['kosher', 'vegan', 'vegetarian', 'glutenfree', 'halal'].includes(t)).map((t) => ' · ' + T[t]).join('');

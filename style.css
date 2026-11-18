@@ -428,3 +428,13 @@ body.noscroll{overflow:hidden}
 .sv b{display:block;font-weight:700}
 .sv small{color:var(--muted);font-size:12.5px}
 .svx{margin-inline-start:auto;border:0;background:#f1f4f5;width:28px;height:28px;border-radius:50%;cursor:pointer;color:var(--muted);flex:none}
+
+/* ===== cover loading + readability ===== */
+.cover .art .artwait{background:linear-gradient(135deg,#0b4f59 0%,#0b7a8a 55%,#12a3b4 100%)}
+.cover .art .artwait:not(.done){background-size:200% 200%;animation:wtWait 2.4s ease-in-out infinite alternate}
+@keyframes wtWait{from{background-position:0% 50%}to{background-position:100% 50%}}
+.cover .art img{opacity:0;transition:opacity .6s ease}
+.cover .art img.in{opacity:1}
+.cover::after{background:linear-gradient(180deg,rgba(0,0,0,.45) 0%,rgba(0,0,0,.12) 24%,rgba(0,0,0,.22) 48%,rgba(0,0,0,.78) 100%)!important}
+.cover h1,.cover .sub,.cover .place-line,.cover .strip{text-shadow:0 2px 14px rgba(0,0,0,.45)}
+@media (prefers-reduced-motion:reduce){.cover .art .artwait{animation:none}.cover .art img{transition:none}}
