@@ -19,7 +19,7 @@ jobs:
           test $(stat -c%s assets/hero.jpg) -gt 20000
       - name: Commit
         run: |
-          git config user.name "orso-digital"
+          git config user.name "waytip-app"
           git config user.email "orso@outlook.co.il"
           git add assets/hero.jpg
           git diff --cached --quiet || git commit -m "Add hero photo"
