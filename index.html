@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#ffffff">
 <meta name="color-scheme" content="light only">
 <link rel="preload" as="image" href="assets/hero.jpg">
-<link rel="stylesheet" href="style.css?v=2611200133">
+<link rel="stylesheet" href="style.css?v=2611200135">
 </head>
 <body>
 <a class="skip" href="#main">דילוג לתוכן הראשי</a>
@@ -173,7 +173,7 @@ setTimeout(function(){if(!window.__wtReady)send('app not ready after 8s','',0)},
 /* אם קוד האתר לא נטען (למשל קבצים ישנים בזיכרון של הדפדפן) – טוענים מחדש פעם אחת */
 setTimeout(function(){ if (!window.__wtReady) { try { if (sessionStorage.getItem('wtReload')) return; sessionStorage.setItem('wtReload','1'); } catch(e){} location.replace(location.pathname + '?r=' + Date.now() + location.hash); } }, 6000);
 </script>
-<script type="module" src="app.js?v=2611200133"></script>
+<script type="module" src="app.js?v=2611200135"></script>
 <nav class="bnav" aria-label="ניווט מהיר"><button type="button" id="bnHome" class="on"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>בית</span></button><button type="button" id="bnSearch"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>חיפוש</span></button><button type="button" id="bnSaved"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><span>שמורים</span></button><button type="button" id="bnAcct"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>חשבון</span></button></nav>
 </body>
 </html>
