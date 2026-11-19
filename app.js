@@ -1,5 +1,5 @@
 import { isEN, startI18n, langButton } from './i18n.js';
-import { searchExtra, extraById } from './places.js';
+import { searchExtra, extraById, searchPop } from './places.js';
 import './a11y.js';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
@@ -219,6 +219,16 @@ function wzShow() {
   chips($('wCat'), CATS, (k) => W.cat === k, (v) => { W.cat = v; wzShow(); }, 'הכל');
   chipsGrouped($('wPref'), (k) => W.prefs.has(k), (v) => { W.prefs.has(v) ? W.prefs.delete(v) : W.prefs.add(v); wzShow(); });
 }
+// יעד מהרשימה המהירה: מחפשים את השם באנגלית כדי לקבל את המזהה הנכון
+async function choose(p) {
+  if (!p.lookup) return pick(p);
+  try {
+    const d = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(p.lookup)}&count=5&language=${isEN ? 'en' : 'he'}&format=json`)).json();
+    const r = (d.results || []).find((x) => x.country_code === p.country_code && x.feature_code !== 'AIRP') || (d.results || [])[0];
+    if (r) return pick(r);
+  } catch (e) {}
+  toast('לא הצלחנו לטעון את היעד, נסו שוב');
+}
 function pick(p) {
   W.id = p.id;
   $('sug').classList.add('hidden');
@@ -238,12 +248,13 @@ $('q').addEventListener('input', () => {
   const q = $('q').value.trim();
   if (q.length < 2) { $('sug').classList.add('hidden'); return; }
   // איים ואזורים (קוסמוי, סנטוריני, באלי…) מופיעים מיד, בלי לחכות לרשת
-  const ex = searchExtra(q).map((p) => ({ id: p.id, name: isEN ? p.en : p.he, country: isEN ? p.countryEn : p.country, country_code: p.cc, admin1: '' }));
+  const ex0 = searchExtra(q).map((p) => ({ id: p.id, name: isEN ? p.en : p.he, country: isEN ? p.countryEn : p.country, country_code: p.cc, admin1: '' }));
+  const ex = [...searchPop(q, isEN).filter((p) => !ex0.some((x) => x.name === p.name)), ...ex0].slice(0, 7);
   const draw = (list) => {
     lastList = list;
     $('sug').innerHTML = lastList.map((p, i) => `<li><button type="button" data-i="${i}"><span class="flag" style="box-shadow:0 0 0 1px #ddd">${flag(p.country_code)}</span>${esc(p.name)} <small>${esc([p.admin1, p.country].filter(Boolean).join(', '))}</small></button></li>`).join('') || '<li><small>לא נמצא יעד</small></li>';
     $('sug').classList.remove('hidden');
-    $('sug').querySelectorAll('[data-i]').forEach((b) => b.onclick = () => pick(lastList[+b.dataset.i]));
+    $('sug').querySelectorAll('[data-i]').forEach((b) => b.onclick = () => choose(lastList[+b.dataset.i]));
   };
   if (ex.length) draw(ex);
   timer = setTimeout(async () => {
@@ -255,12 +266,12 @@ $('q').addEventListener('input', () => {
       lastList = [...ex, ...found].slice(0, 8);
       $('sug').innerHTML = lastList.map((p, i) => `<li><button type="button" data-i="${i}"><span class="flag" style="box-shadow:0 0 0 1px #ddd">${flag(p.country_code)}</span>${esc(p.name)} <small>${esc([p.admin1, p.country].filter(Boolean).join(', '))}</small></button></li>`).join('') || '<li><small>לא נמצא יעד</small></li>';
       $('sug').classList.remove('hidden');
-      $('sug').querySelectorAll('[data-i]').forEach((b) => b.onclick = () => pick(lastList[+b.dataset.i]));
+      $('sug').querySelectorAll('[data-i]').forEach((b) => b.onclick = () => choose(lastList[+b.dataset.i]));
     } catch (e) {}
   }, 150);
 });
 $('wzNext').onclick = () => {
-  if (step === 1 && !W.id) { if (lastList[0]) pick(lastList[0]); else { $('q').focus(); toast('הקלידו יעד ובחרו מהרשימה'); return; } }
+  if (step === 1 && !W.id) { if (lastList[0]) { choose(lastList[0]).then(() => { if (W.id) $('wzNext').click(); }); return; } else { $('q').focus(); toast('הקלידו יעד ובחרו מהרשימה'); return; } }
   if (step === 2 && !$('from').value) { toast('בחרו תאריך התחלה'); return; }
   if (step < 4) { step++; wzShow(); return; }
   openById(W.id, true);
@@ -437,6 +448,7 @@ function render() {
   const emptyWeb = () => {
     const g = (q) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q + ' ' + dest.enName);
     const k = F.prefs.has('kosher') || F.prefs.has('shabbat');
+    if (osmLoading) return `<div class="empty" style="grid-column:1/-1"><b>מחפשים עוד מקומות במפה…</b>זה יכול לקחת כמה שניות</div>`;
     return `<div class="empty" style="grid-column:1/-1"><b>${osmFail ? 'לא הצלחנו לטעון כרגע את המקומות מהמפה' : 'אין ברשימה הזו מקומות שמתאימים לסינון'}</b>`
       + `${osmFail ? '<button class="navlink" id="osmRetry">נסו שוב</button> ' : 'ההמלצות של ה-AI למעלה מתאימות לסינון שבחרתם. '}`
       + '</div>';
@@ -512,13 +524,20 @@ async function loadWeb() {
   const me = dest;
   $('wvLink').href = 'https://en.wikivoyage.org/wiki/' + encodeURIComponent(dest.enName.replace(/ /g, '_'));
   loadingW = true; render();
-  const [wv, osm, wp] = await Promise.all([loadWV(dest.enName), loadOSM(dest), loadWiki(dest)]);
+  // מה שמגיע מהר (ויקימסע, ויקיפדיה) מוצג מיד; המקומות מהמפה מצטרפים כשהם מגיעים
+  osmLoading = true;
+  const osmP = loadOSM(dest).finally(() => { osmLoading = false; });
+  const [wv, wp] = await Promise.all([loadWV(dest.enName), loadWiki(dest)]);
   if (me !== dest) return;
-  // בלי כפילויות: מקום שמופיע גם בוויקימסע וגם בוויקיפדיה מוצג פעם אחת
   const names = new Set(wv.map((w) => w.name.toLowerCase()));
-  web = [...osm, ...wv, ...wp.filter((w) => !names.has((w.enTitle || '').toLowerCase()))];
-  await within(translateWeb(wv), 6000); // תיאורים בעברית (נשמרים, אז רק בפעם הראשונה זה לוקח רגע)
+  web = [...wv, ...wp.filter((w) => !names.has((w.enTitle || '').toLowerCase()))];
+  await within(translateWeb(wv), 4000); // תיאורים בעברית (נשמרים, אז רק בפעם הראשונה זה לוקח רגע)
   if (me !== dest) return;
+  loadingW = false; render();
+  const osm = await osmP;
+  if (me !== dest) return;
+  if (!osm.length) { render(); return; }
+  web = [...osm, ...web];
   loadingW = false; render();
 }
 
@@ -580,7 +599,7 @@ const OSM_SETS = [
   ['kosher', '["diet:kosher"~"^(yes|only)$"]'], ['vegan', '["diet:vegan"~"^(yes|only)$"]'], ['glutenfree', '["diet:gluten_free"~"^(yes|only)$"]'],
   ['halal', '["diet:halal"~"^(yes|only)$"]'], ['vegetarian', '["diet:vegetarian"="only"]'], ['jewish', '["amenity"="place_of_worship"]["religion"="jewish"]'],
 ];
-let osmFail = false;
+let osmFail = false, osmLoading = false;
 async function loadOSM(d) {
   if (d.lat == null) return [];
   const R = 20000, at = `(around:${R},${d.lat},${d.lon})`;
@@ -588,10 +607,10 @@ async function loadOSM(d) {
   osmFail = false;
   // קודם דרך השרת שלנו (שומר תוצאות, אז בפעם הבאה זה מיידי), ואם לא – ישירות
   try {
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 35000);
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 40000);
     const r = await fetch(`${SERVER_URL}/places?lat=${d.lat}&lon=${d.lon}`, { signal: ctl.signal });
     clearTimeout(t);
-    if (r.ok) { const els = (await r.json()).elements || []; const seen = new Set(); return els.filter((e) => e.tags && e.tags.name && !seen.has(e.id) && seen.add(e.id)).map(osmItem); }
+    if (r.ok) { const j = await r.json(); const els = j.elements || []; if (j.fail && !els.length) throw new Error('osm'); const seen = new Set(); return els.filter((e) => e.tags && e.tags.name && !seen.has(e.id) && seen.add(e.id)).map(osmItem); }
   } catch (e) {}
   // כמה שרתים של OpenStreetMap: אם אחד עמוס או איטי, מנסים את הבא
   for (const base of ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter']) {
@@ -682,7 +701,7 @@ function scheduleAI() {
   aiT = setTimeout(async () => {
     aiKey = key; aiLoading = true; aiData = null; drawAI();
     try {
-      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 30000);
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 60000);
       const r = await fetch(SERVER_URL + '/ai/recs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: key, signal: ctl.signal });
       clearTimeout(t);
       const d = await r.json();
@@ -789,7 +808,15 @@ addEventListener('scroll', () => document.querySelectorAll('.cue').forEach((c) =
 // ================= תפריט תחתון (בטלפון) =================
 (() => {
   const nb = document.querySelector('.bnav'); if (!nb) return;
-  const on = (id) => nb.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.id === id));
+  // בועה זכוכית שגולשת לכפתור הנבחר (כמו בתפריט של האייפון)
+  const pill = document.createElement('span'); pill.className = 'bpill'; pill.setAttribute('aria-hidden', 'true'); nb.prepend(pill);
+  const place = () => { const b = nb.querySelector('button.on'); if (!b) return; pill.style.width = b.offsetWidth + 'px'; pill.style.transform = `translateX(${b.offsetLeft}px)`; };
+  const on = (id) => { nb.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.id === id); b.setAttribute('aria-current', b.id === id ? 'page' : 'false'); }); place(); };
+  requestAnimationFrame(place); addEventListener('resize', place);
+  // בגלילה למטה התפריט מתכווץ, בגלילה למעלה חוזר
+  let lastY = scrollY;
+  addEventListener('scroll', () => { const y = scrollY; if (Math.abs(y - lastY) < 8) return; nb.classList.toggle('mini', y > lastY && y > 120); lastY = y; requestAnimationFrame(place); }, { passive: true });
+  nb.addEventListener('transitionend', place);
   $('bnHome').onclick = () => { $('home').click(); on('bnHome'); };
   $('bnSearch').onclick = () => { if (!$('destPage').classList.contains('hidden')) $('home').click(); setTimeout(() => { $('wz').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); on('bnSearch'); };
   $('bnSaved').onclick = () => { goSaved(); on('bnSaved'); };

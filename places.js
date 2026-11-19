@@ -74,3 +74,29 @@ export function searchExtra(q) {
   return EXTRA.filter((p) => [p.he, ...p.alt, p.en].some((x) => norm(x).startsWith(n) || (n.length >= 3 && norm(x).includes(n)))).slice(0, 4);
 }
 export const extraById = (id) => EXTRA.find((p) => p.id === id);
+
+// יעדים פופולריים אצל ישראלים: מופיעים מיד מהאות השנייה (המאגר החיצוני מחפש היטב רק מ-3 אותיות).
+// בבחירה מחפשים את השם באנגלית במאגר כדי לקבל את המזהה הנכון של העיר.
+export const POPDEST = [
+  ['רומא','Rome','איטליה','Italy','IT'],['מילאנו','Milan','איטליה','Italy','IT'],['ונציה','Venice','איטליה','Italy','IT'],['פירנצה','Florence','איטליה','Italy','IT'],['נאפולי','Naples','איטליה','Italy','IT'],['איטליה','Italy','','Italy','IT'],
+  ['פריז','Paris','צרפת','France','FR'],['ניס','Nice','צרפת','France','FR'],['צרפת','France','','France','FR'],
+  ['לונדון','London','בריטניה','United Kingdom','GB'],['אמסטרדם','Amsterdam','הולנד','Netherlands','NL'],['ברלין','Berlin','גרמניה','Germany','DE'],['מינכן','Munich','גרמניה','Germany','DE'],
+  ['פראג','Prague','צ\'כיה','Czechia','CZ'],['וינה','Vienna','אוסטריה','Austria','AT'],['בודפשט','Budapest','הונגריה','Hungary','HU'],['בוקרשט','Bucharest','רומניה','Romania','RO'],['רומניה','Romania','','Romania','RO'],
+  ['ורשה','Warsaw','פולין','Poland','PL'],['קרקוב','Krakow','פולין','Poland','PL'],['סופיה','Sofia','בולגריה','Bulgaria','BG'],['בטומי','Batumi','גאורגיה','Georgia','GE'],['טביליסי','Tbilisi','גאורגיה','Georgia','GE'],['גאורגיה','Georgia','','Georgia','GE'],
+  ['אתונה','Athens','יוון','Greece','GR'],['יוון','Greece','','Greece','GR'],['סלוניקי','Thessaloniki','יוון','Greece','GR'],['קפריסין','Cyprus','','Cyprus','CY'],['לרנקה','Larnaca','קפריסין','Cyprus','CY'],['לימסול','Limassol','קפריסין','Cyprus','CY'],['פאפוס','Paphos','קפריסין','Cyprus','CY'],
+  ['ברצלונה','Barcelona','ספרד','Spain','ES'],['מדריד','Madrid','ספרד','Spain','ES'],['ספרד','Spain','','Spain','ES'],['ליסבון','Lisbon','פורטוגל','Portugal','PT'],['פורטו','Porto','פורטוגל','Portugal','PT'],['פורטוגל','Portugal','','Portugal','PT'],
+  ['ציריך','Zurich','שווייץ','Switzerland','CH'],['ז\'נבה','Geneva','שווייץ','Switzerland','CH'],['שווייץ','Switzerland','','Switzerland','CH'],['דובלין','Dublin','אירלנד','Ireland','IE'],['קופנהגן','Copenhagen','דנמרק','Denmark','DK'],['שטוקהולם','Stockholm','שוודיה','Sweden','SE'],
+  ['איסטנבול','Istanbul','טורקיה','Turkey','TR'],['אנטליה','Antalya','טורקיה','Turkey','TR'],['דובאי','Dubai','איחוד האמירויות','United Arab Emirates','AE'],['אבו דאבי','Abu Dhabi','איחוד האמירויות','United Arab Emirates','AE'],['מרוקו','Morocco','','Morocco','MA'],['מרקש','Marrakesh','מרוקו','Morocco','MA'],
+  ['בנגקוק','Bangkok','תאילנד','Thailand','TH'],['תאילנד','Thailand','','Thailand','TH'],['צ\'יאנג מאי','Chiang Mai','תאילנד','Thailand','TH'],['וייטנאם','Vietnam','','Vietnam','VN'],['האנוי','Hanoi','וייטנאם','Vietnam','VN'],['הו צ\'י מין','Ho Chi Minh City','וייטנאם','Vietnam','VN'],
+  ['טוקיו','Tokyo','יפן','Japan','JP'],['יפן','Japan','','Japan','JP'],['קיוטו','Kyoto','יפן','Japan','JP'],['סינגפור','Singapore','','Singapore','SG'],['הודו','India','','India','IN'],['גואה','Goa','הודו','India','IN'],['נפאל','Nepal','','Nepal','NP'],['קטמנדו','Kathmandu','נפאל','Nepal','NP'],['סרי לנקה','Sri Lanka','','Sri Lanka','LK'],
+  ['ניו יורק','New York City','ארצות הברית','United States','US'],['מיאמי','Miami','ארצות הברית','United States','US'],['לוס אנג\'לס','Los Angeles','ארצות הברית','United States','US'],['לאס וגאס','Las Vegas','ארצות הברית','United States','US'],['אורלנדו','Orlando','ארצות הברית','United States','US'],['ארצות הברית','United States','','United States','US'],
+  ['מקסיקו','Mexico','','Mexico','MX'],['קנקון','Cancun','מקסיקו','Mexico','MX'],['פרו','Peru','','Peru','PE'],['ארגנטינה','Argentina','','Argentina','AR'],['בואנוס איירס','Buenos Aires','ארגנטינה','Argentina','AR'],['ברזיל','Brazil','','Brazil','BR'],['ריו דה ז\'ניירו','Rio de Janeiro','ברזיל','Brazil','BR'],['קולומביה','Colombia','','Colombia','CO'],['קוסטה ריקה','Costa Rica','','Costa Rica','CR'],
+  ['אוסטרליה','Australia','','Australia','AU'],['סידני','Sydney','אוסטרליה','Australia','AU'],['ניו זילנד','New Zealand','','New Zealand','NZ'],['דרום אפריקה','South Africa','','South Africa','ZA'],['קייפטאון','Cape Town','דרום אפריקה','South Africa','ZA'],['זנזיבר','Zanzibar','טנזניה','Tanzania','TZ'],
+  ['אילת','Eilat','ישראל','Israel','IL'],['ירושלים','Jerusalem','ישראל','Israel','IL'],['תל אביב','Tel Aviv','ישראל','Israel','IL'],['טבריה','Tiberias','ישראל','Israel','IL'],
+];
+export function searchPop(q, en) {
+  const n = norm(q);
+  if (n.length < 2) return [];
+  return POPDEST.filter(([he, e]) => norm(he).startsWith(n) || norm(e).startsWith(n) || he.split(' ').some((w) => norm(w).startsWith(n)))
+    .slice(0, 6).map(([he, e, cHe, cEn, cc]) => ({ lookup: e, name: en ? e : he, country: en ? (cHe ? cEn : '') : cHe, country_code: cc, admin1: '' }));
+}
