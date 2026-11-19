@@ -1,18 +1,18 @@
-import { isEN, startI18n, langButton } from './i18n.js?v=2611200125';
-import { searchExtra, extraById, searchPop } from './places.js?v=2611200125';
-import './a11y.js?v=2611200125';
+import { isEN, startI18n, langButton } from './i18n.js?v=2611200126';
+import { searchExtra, extraById, searchPop } from './places.js?v=2611200126';
+import './a11y.js?v=2611200126';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
   addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
-} from './firebase.js?v=2611200125';
-import { openAuth } from './account.js?v=2611200125';
-import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200125';
-import { SERVER_URL, SITE_NAME } from './config.js?v=2611200125';
-import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200125';
-import { parseVideo, videoButton } from './video.js?v=2611200125';
-import './reviews-web.js?v=2611200125';
-import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200125';
-import { mini, TRIP_ICON } from './covers.js?v=2611200125';
+} from './firebase.js?v=2611200126';
+import { openAuth } from './account.js?v=2611200126';
+import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200126';
+import { SERVER_URL, SITE_NAME } from './config.js?v=2611200126';
+import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200126';
+import { parseVideo, videoButton } from './video.js?v=2611200126';
+import './reviews-web.js?v=2611200126';
+import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200126';
+import { mini, TRIP_ICON } from './covers.js?v=2611200126';
 import { startRegistration, startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
 
 const $ = (id) => document.getElementById(id);
@@ -671,6 +671,16 @@ async function translateWeb(list) {
     miss.forEach((w, i) => { if (out[i]) w.he = out[i]; });
   } catch (e) {}
 }
+// היעד שנבחר בטופס: מציגים את השם בשפה הנוכחית
+window.addEventListener('langchange', async () => {
+  if (!W.id) return;
+  try {
+    const ex = extraById(W.id);
+    if (ex) return pick({ id: ex.id, name: isEN ? ex.en : ex.he, country: isEN ? ex.countryEn : ex.country, country_code: ex.cc });
+    const r = await (await fetch(`https://geocoding-api.open-meteo.com/v1/get?id=${W.id}&language=${isEN ? 'en' : 'he'}`)).json();
+    if (r && r.id) pick(r);
+  } catch (e) {}
+});
 window.addEventListener('langchange', async () => { // החלפת שפה בלי לטעון מחדש
   if (dest) {
     const x = extraById(String(dest.id));
@@ -812,7 +822,7 @@ try { (() => {
   const pill = document.createElement('span'); pill.className = 'bpill'; pill.setAttribute('aria-hidden', 'true'); nb.prepend(pill);
   const place = () => { const b = nb.querySelector('button.on'); if (!b) return; pill.style.width = b.offsetWidth + 'px'; pill.style.transform = `translateX(${b.offsetLeft}px)`; };
   const on = (id) => { nb.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.id === id); b.setAttribute('aria-current', b.id === id ? 'page' : 'false'); }); place(); };
-  requestAnimationFrame(place); addEventListener('resize', place);
+  requestAnimationFrame(place); addEventListener('resize', place); addEventListener('langchange', () => setTimeout(place, 50));
   // בגלילה למטה התפריט מתכווץ, בגלילה למעלה חוזר
   let lastY = scrollY;
   addEventListener('scroll', () => { const y = scrollY; if (Math.abs(y - lastY) < 28) return; const want = y > lastY && y > 160; if (want !== nb.classList.contains('mini')) nb.classList.toggle('mini', want); lastY = y; }, { passive: true });
