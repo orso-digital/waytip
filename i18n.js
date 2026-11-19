@@ -114,7 +114,7 @@ const D = {
   'שגיאה בשרת': 'Server error', 'לא הצלחתי לטעון את היעד': 'Couldn\'t load the destination',
   'מה הבעיה בהמלצה? (למשל: פרסומת, מידע לא נכון, תוכן פוגעני, פגיעה בפרטיות, לשון הרע או הפרת זכויות יוצרים)': 'What\'s wrong with this tip? (e.g. advertising, wrong info, offensive content, privacy, defamation or copyright)',
   'תודה, הדיווח נשלח לבדיקה': 'Thanks, the report was sent for review', 'לא הצלחתי לשלוח את הדיווח': 'Couldn\'t send the report',
-  'דגל': 'Flag', 'קרדיט לצילומים': 'Photo credits', 'לגונה טורקיז באי קו מאק, תאילנד': 'Turquoise lagoon on Koh Mak island, Thailand', 'תפריט נגישות': 'Accessibility menu', 'נגישות': 'Accessibility', 'הגדלת טקסט': 'Larger text', 'הקטנת טקסט': 'Smaller text',
+  'דגל': 'Flag', 'קרדיט לצילומים': 'Photo credits', 'חוף ים טורקיז': 'Turquoise beach', 'תפריט נגישות': 'Accessibility menu', 'נגישות': 'Accessibility', 'הגדלת טקסט': 'Larger text', 'הקטנת טקסט': 'Smaller text',
   'ניגודיות גבוהה': 'High contrast', 'גווני אפור': 'Grayscale', 'הדגשת קישורים': 'Highlight links', 'גופן קריא': 'Readable font', 'ריווח שורות': 'Line spacing',
   'עצירת אנימציות': 'Stop animations', 'סמן גדול': 'Large cursor', 'מסגרת מיקוד בולטת': 'Strong focus outline', 'איפוס הגדרות': 'Reset', 'גודל טקסט': 'Text size',
   'א-': 'A-', 'א+': 'A+', 'מעבר לעברית': 'Switch to Hebrew', 'כניסה עם טביעת אצבע / Face ID': 'Sign in with fingerprint / Face ID',

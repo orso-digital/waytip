@@ -1,0 +1,26 @@
+name: Save hero photo
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/hero.yml']
+permissions:
+  contents: write
+jobs:
+  hero:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download hero photo from Firestore cache
+        run: |
+          set -e
+          U='https://firestore.googleapis.com/v1/projects/waytip-9661b/databases/(default)/documents/photoBlobs/v2-waytip-hero'
+          curl -sSf "$U" | jq -r '.fields.data.stringValue' | base64 -d > assets/hero.jpg
+          file assets/hero.jpg
+          test $(stat -c%s assets/hero.jpg) -gt 20000
+      - name: Commit
+        run: |
+          git config user.name "orso-digital"
+          git config user.email "orso@outlook.co.il"
+          git add assets/hero.jpg
+          git diff --cached --quiet || git commit -m "Add hero photo"
+          git push

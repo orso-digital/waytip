@@ -116,7 +116,7 @@ const CURATED = {
   'New York City': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg/1280px-Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg/1920px-Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg', file: 'Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg' },
   'London': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Tower_Bridge_London_Feb_2006.jpg/1280px-Tower_Bridge_London_Feb_2006.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Tower_Bridge_London_Feb_2006.jpg/1920px-Tower_Bridge_London_Feb_2006.jpg', file: 'Tower_Bridge_London_Feb_2006.jpg' },
   'Barcelona': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Sagrada_Familia_01.jpg/1280px-Sagrada_Familia_01.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Sagrada_Familia_01.jpg/1920px-Sagrada_Familia_01.jpg', file: 'Sagrada_Familia_01.jpg' },
-  'waytip hero': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg/1280px-Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg/1920px-Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg', file: 'Koh_Mak_(island),_Thailand,_Solitary_tree_in_lagoon.jpg' },
+  'waytip hero': { src: 'assets/hero.jpg', big: 'assets/hero.jpg' },
 };
 async function wvPhoto(en) {
   try {
