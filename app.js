@@ -1,18 +1,18 @@
-import { isEN, startI18n, langButton } from './i18n.js?v=2611200135';
-import { searchExtra, extraById, searchPop } from './places.js?v=2611200135';
-import './a11y.js?v=2611200135';
+import { isEN, startI18n, langButton } from './i18n.js?v=2611200137';
+import { searchExtra, extraById, searchPop } from './places.js?v=2611200137';
+import './a11y.js?v=2611200137';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
   addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
-} from './firebase.js?v=2611200135';
-import { openAuth } from './account.js?v=2611200135';
-import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200135';
-import { SERVER_URL, SITE_NAME } from './config.js?v=2611200135';
-import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200135';
-import { parseVideo, videoButton } from './video.js?v=2611200135';
-import './reviews-web.js?v=2611200135';
-import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200135';
-import { mini, TRIP_ICON } from './covers.js?v=2611200135';
+} from './firebase.js?v=2611200137';
+import { openAuth } from './account.js?v=2611200137';
+import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200137';
+import { SERVER_URL, SITE_NAME } from './config.js?v=2611200137';
+import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200137';
+import { parseVideo, videoButton } from './video.js?v=2611200137';
+import './reviews-web.js?v=2611200137';
+import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200137';
+import { mini, TRIP_ICON } from './covers.js?v=2611200137';
 import { startRegistration, startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
 
 const $ = (id) => document.getElementById(id);
@@ -630,14 +630,17 @@ async function loadOSM(d) {
 function osmItem(e) {
   const g = e.tags;
   const tags = [];
-  if (/^(yes|only)$/.test(g['diet:kosher'] || '')) tags.push('kosher');
+  const nm = (g.name || '') + ' ' + (g['name:en'] || '') + ' ' + (g.cuisine || '');
+  const chabad = /chabad|חב"ד|lubavitch/i.test(nm);
+  if (/^(yes|only)$/.test(g['diet:kosher'] || g.kosher || '') || /kosher|כשר/i.test(nm)) tags.push('kosher');
+  if (chabad || g.religion === 'jewish') tags.push('shabbat');
   if (/^(yes|only)$/.test(g['diet:vegan'] || '')) tags.push('vegan');
   if (/^(yes|only)$/.test(g['diet:vegetarian'] || '')) tags.push('vegetarian');
   if (/^(yes|only)$/.test(g['diet:gluten_free'] || '')) tags.push('glutenfree');
   if (/^(yes|only)$/.test(g['diet:halal'] || '')) tags.push('halal');
   if (g.wheelchair === 'yes') tags.push('access');
   const am = g.amenity || '', sh = g.shop || '';
-  const cat = am === 'place_of_worship' ? 'jewish' : /cafe|ice_cream/.test(am) ? 'cafe' : sh ? 'shop' : 'food';
+  const cat = am === 'place_of_worship' || (chabad && !/restaurant|cafe|fast_food/.test(am)) ? 'jewish' : /cafe|ice_cream/.test(am) ? 'cafe' : sh ? 'shop' : 'food';
   const it = { osm: true, g, cat, tags, url: g.website || g['contact:website'] || '' };
   Object.defineProperty(it, 'name', { get: () => (isEN ? g['name:en'] : g['name:he']) || g.name });
   Object.defineProperty(it, 'text', { get: () => osmText(g, tags) });

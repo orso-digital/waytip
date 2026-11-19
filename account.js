@@ -1,6 +1,6 @@
 // חלון התחברות: גוגל, מייל וסיסמה, או כניסה כאורח
-import { auth, loginGoogle, signupEmail, loginEmail, resetPassword, loginGuest, loginToken } from './firebase.js?v=2611200135';
-import { SERVER_URL } from './config.js?v=2611200135';
+import { auth, loginGoogle, signupEmail, loginEmail, resetPassword, loginGuest, loginToken } from './firebase.js?v=2611200137';
+import { SERVER_URL } from './config.js?v=2611200137';
 import { startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
 const canPasskey = () => !!(window.PublicKeyCredential && navigator.credentials);
 // כניסה עם טביעת אצבע / Face ID: השרת מאמת ומחזיר כניסה חד-פעמית
