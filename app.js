@@ -199,9 +199,12 @@ const POPULAR = [
   { id: 2643743, he: 'לונדון', en: 'London', country: 'United Kingdom', heC: 'בריטניה', cc: 'gb' },
   { id: 3128760, he: 'ברצלונה', en: 'Barcelona', country: 'Spain', heC: 'ספרד', cc: 'es' },
 ];
-$('pop').innerHTML = POPULAR.map((p, i) => `<button class="pc" data-i="${i}"><div class="art" id="pa${i}"></div><div class="t"><b>${p.he}</b><span><span class="flag">${flag(p.cc)}</span>${p.heC}</span></div></button>`).join('');
+$('pop').innerHTML = POPULAR.map((p, i) => `<button class="pc" data-i="${i}"><div class="art" id="pa${i}"></div><span class="pheart" role="button" tabindex="0" data-ps="${i}" aria-label="שמירה">♡</span><div class="t"><b>${p.he}</b><span><span class="flag">${flag(p.cc)}</span>${p.heC}</span></div></button>`).join('');
 POPULAR.forEach((p, i) => paint($('pa' + i), p.en, p.country));
-document.querySelectorAll('.pc').forEach((b) => b.onclick = () => openById(POPULAR[+b.dataset.i].id));
+const popSave = (i) => { const p = POPULAR[i]; toggleSaved({ id: p.id, name: p.he, country: p.heC, cc: p.cc }).then((on) => toast(on ? 'נשמר ♥' : 'הוסר מהשמורים')); };
+document.querySelectorAll('.pc').forEach((b) => b.onclick = (e) => { const h = e.target.closest('.pheart'); if (h) { e.stopPropagation(); popSave(+h.dataset.ps); return; } openById(POPULAR[+b.dataset.i].id); });
+document.querySelectorAll('.pheart').forEach((h) => h.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); popSave(+h.dataset.ps); } });
+onSaved(() => document.querySelectorAll('.pheart').forEach((h) => { const on = isSaved(POPULAR[+h.dataset.ps].id); h.textContent = on ? '♥' : '♡'; h.classList.toggle('on', on); }));
 
 // ================= תכנון: יעד ← תאריכים ← אופי טיול ← העדפות =================
 const W = { id: null, trip: '', cat: '', prefs: new Set() };
@@ -782,5 +785,15 @@ document.querySelectorAll('.cue').forEach((c) => c.onclick = () => document.getE
 addEventListener('scroll', () => document.querySelectorAll('.cue').forEach((c) => c.classList.toggle('gone', scrollY > 60)), { passive: true });
 
 // שפה: כפתור החלפה בתפריט העליון, ותרגום הממשק לאנגלית כשנבחרה
+
+// ================= תפריט תחתון (בטלפון) =================
+(() => {
+  const nb = document.querySelector('.bnav'); if (!nb) return;
+  const on = (id) => nb.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.id === id));
+  $('bnHome').onclick = () => { $('home').click(); on('bnHome'); };
+  $('bnSearch').onclick = () => { if (!$('destPage').classList.contains('hidden')) $('home').click(); setTimeout(() => { $('wz').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); on('bnSearch'); };
+  $('bnSaved').onclick = () => { goSaved(); on('bnSaved'); };
+  $('bnAcct').onclick = (e) => { e.stopPropagation(); const b = document.querySelector('.topbar [data-login]'); if (b) b.click(); };
+})();
 $('langSlot').replaceWith(langButton());
 startI18n();

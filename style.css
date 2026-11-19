@@ -526,65 +526,120 @@ html{color-scheme:light}
 .aiaddr{display:block;color:#5b7c78;font-size:.8rem;margin-top:2px}
 .ainav{display:inline-block;margin-top:4px;font-size:.82rem;font-weight:700;color:#0b7a8a}
 
-/* ================= D · SOFT & WARM REFRESH (2026-11) =================
-   Same colours, softened: warmer whites, gentle ink, rounded type for titles,
-   pillowy cards with soft shadows, teal instead of black for selected states. */
-html[data-theme=app]{--bg:#fffefc;--ink:#26302f;--ink2:#46514f;--muted:#6f7976;--line:#ece9e4;--soft:#f7f5f1;--jade:#0b7a8a;--jade2:#e8f4f3;--sh:0 2px 6px rgba(38,48,47,.04),0 10px 28px rgba(38,48,47,.07);--r:20px}
+/* ================= E · WARM LUXE (2026-11) =================
+   Inspired by warm editorial travel apps: cream paper, coffee-brown actions,
+   sand-gold accents, teal only for the logo and selected marks.
+   Elegant serif titles (Frank Ruhl Libre), clean text (Assistant),
+   frosted glass over photos, pillowy cards, app-like bottom bar on phones. */
+html[data-theme=app]{--bg:#f5f0e8;--card:#fffcf7;--ink:#2f2823;--ink2:#54493f;--muted:#8a7d70;--line:#e8dfd2;--soft:#efe7db;
+  --brown:#7a5c45;--brown2:#5f4535;--sand:#c9a97e;--sand2:#efe3cf;--jade:#0b7a8a;--jade2:#e3f1f0;
+  --sh:0 1px 2px rgba(60,40,20,.04),0 12px 32px rgba(60,40,20,.08);--r:22px;--glass:rgba(255,250,242,.62)}
 html[data-theme=app] body{background:var(--bg);color:var(--ink);font-family:Assistant,Heebo,Arial,sans-serif;font-size:16.5px}
-html[data-theme=app] :is(.cover h1,.sh h2,.write h2,.wz-body h3,.rv h4,.pl h4,.pc .t b,.strip b,.stat b,.ahead h1,.empty b,.sheet b,.aibox h3,h1,h2,h3){font-family:"Varela Round",Assistant,sans-serif;font-weight:400;letter-spacing:0}
-html[data-theme=app] .cover h1{font-size:clamp(44px,7.5vw,88px);text-shadow:0 2px 18px rgba(0,0,0,.25)}
-html[data-theme=app] .pc .t b{font-size:26px}
-html[data-theme=app] .sh h2{font-size:clamp(24px,2.8vw,32px);color:var(--ink)}
-html[data-theme=app] .sh p,html[data-theme=app] .wz-sub{color:var(--muted)}
-/* covers: a little softer and warmer */
-html[data-theme=app] .cover{border-radius:26px;box-shadow:var(--sh)}
-html[data-theme=app] .cover::after{background:linear-gradient(180deg,rgba(20,30,30,0) 35%,rgba(20,30,30,.14) 58%,rgba(20,30,30,.42) 100%)}
-/* wizard card */
-html[data-theme=app] .wz{border-radius:24px;box-shadow:0 10px 40px rgba(20,40,40,.16)}
+html[data-theme=app] :is(.cover h1,.sh h2,.write h2,.wz-body h3,.rv h4,.pl h4,.pc .t b,.stat b,.ahead h1,.empty b,.sheet b,.aibox h3,.legal h1,.legal h2){font-family:"Frank Ruhl Libre",serif;font-weight:500;letter-spacing:0}
+html[data-theme=app] .cover h1{font-size:clamp(46px,8vw,92px);font-weight:500;line-height:1.02;text-shadow:0 2px 24px rgba(30,20,10,.25)}
+html[data-theme=app] .sh h2{font-size:clamp(26px,3vw,34px);color:var(--ink)}
+html[data-theme=app] :is(.sh p,.wz-sub){color:var(--muted)}
+html[data-theme=app] .sh{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+
+/* top bar – cream glass */
+html[data-theme=app] .topbar{background:rgba(245,240,232,.82);border-bottom:1px solid rgba(122,92,69,.1)}
+html[data-theme=app] .brand{font-family:Assistant,sans-serif}
+html[data-theme=app] .topbar .navlink,html[data-theme=app] .savebtn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px}
+html[data-theme=app] .langbtn{background:var(--sand2);color:var(--brown2);border:0;border-radius:999px}
+
+/* covers: photo with warm glass on top */
+html[data-theme=app] .cover{border-radius:30px;box-shadow:var(--sh);background:#cdbfae}
+html[data-theme=app] .cover::after{background:linear-gradient(180deg,rgba(40,25,10,0) 30%,rgba(40,25,10,.16) 58%,rgba(40,25,10,.46) 100%)}
+html[data-theme=app] .cover .art .photo,html[data-theme=app] .art .photo{background-color:#cdbfae}
+html[data-theme=app] .wz{background:var(--glass);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);border:1px solid rgba(255,255,255,.55);border-radius:26px;box-shadow:0 18px 50px rgba(40,25,10,.22)}
+html[data-theme=app] .wz-steps{border-bottom-color:rgba(122,92,69,.14)}
 html[data-theme=app] .wz-steps span{color:var(--muted)}
-html[data-theme=app] .wz-steps span.on{color:var(--jade);border-bottom-color:var(--jade)}
+html[data-theme=app] .wz-steps span.on{color:var(--brown2);border-bottom-color:var(--brown)}
+html[data-theme=app] .wz-body h3{color:var(--ink)}
+html[data-theme=app] .strip div,html[data-theme=app] .strip div+div,html[data-theme=app] .stat{background:rgba(255,250,242,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.32);border-radius:18px}
+html[data-theme=app] .cue{background:rgba(255,250,242,.24);border-color:rgba(255,255,255,.45)}
+#destPage .cover{background:linear-gradient(160deg,#a8957f,#6d5645)}
+
 /* inputs */
-html[data-theme=app] :is(.wz-field input,.form input,.form select,.form textarea,.fpanel .dates input,.dates input){border-radius:14px;border:1px solid #e4e1db;background:#fff;transition:border-color .2s,box-shadow .2s}
-html[data-theme=app] :is(.wz-field input,.form input,.form select,.form textarea,.dates input):focus{outline:none;border-color:#7fc3cb;box-shadow:0 0 0 4px rgba(11,122,138,.12)}
-html[data-theme=app] .wz-picked{border-radius:14px;background:var(--jade2);border-color:transparent}
-/* pills: chips & filter buttons – teal, never black */
-html[data-theme=app] :is(.chip,.fbtn){border:1px solid #e4e1db;background:#fff;color:var(--ink2);box-shadow:none;transition:background .2s,border-color .2s,color .2s}
-html[data-theme=app] :is(.chip,.fbtn):hover{border-color:#bcdcdf}
-html[data-theme=app] :is(.chip.on,.fbtn.has){background:var(--jade2);border-color:#a9d6db;color:#0a5f6b}
-html[data-theme=app] .fbtn.open:not(.has){border-color:#7fc3cb}
-html[data-theme=app] .fpanel{background:#fff;border-radius:var(--r);box-shadow:var(--sh);border:0;padding:16px}
-html[data-theme=app] .clear{color:var(--jade)}
-/* buttons */
-html[data-theme=app] :is(.btn,.go){background:var(--jade);border-radius:999px;box-shadow:0 6px 16px rgba(11,122,138,.22);transition:transform .15s,box-shadow .2s}
-html[data-theme=app] :is(.btn,.go):hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(11,122,138,.28)}
-html[data-theme=app] .btn.line{background:#fff;color:var(--ink);border:1px solid #e4e1db;box-shadow:none}
-html[data-theme=app] .navlink{border-color:#e4e1db}
+html[data-theme=app] :is(.wz-field input,.form input,.form select,.form textarea,.fpanel .dates input,.dates input){border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);transition:border-color .2s,box-shadow .2s}
+html[data-theme=app] :is(.wz-field input,.form input,.form select,.form textarea,.dates input):focus{outline:none;border-color:var(--sand);box-shadow:0 0 0 4px rgba(201,169,126,.22)}
+html[data-theme=app] .wz-picked{border-radius:16px;background:var(--sand2);border-color:transparent;color:var(--ink)}
+html[data-theme=app] #sug{background:var(--card);border-radius:18px;box-shadow:var(--sh);border:0}
+
+/* pills */
+html[data-theme=app] :is(.chip,.fbtn){border:1px solid var(--line);background:var(--card);color:var(--ink2);box-shadow:none;transition:background .2s,border-color .2s,color .2s}
+html[data-theme=app] :is(.chip,.fbtn):hover{border-color:var(--sand)}
+html[data-theme=app] :is(.chip.on,.fbtn.has){background:var(--jade2);border-color:#a9d3d6;color:#095a65}
+html[data-theme=app] .fbtn.open:not(.has){border-color:var(--sand)}
+html[data-theme=app] .fbar{background:rgba(245,240,232,.9)}
+html[data-theme=app] .fpanel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);border:0;padding:16px}
+html[data-theme=app] .clear{color:var(--brown)}
+
+/* buttons – coffee brown */
+html[data-theme=app] :is(.btn,.go,.pdone){background:var(--brown);color:#fff8ee;border:0;border-radius:999px;box-shadow:0 8px 20px rgba(122,92,69,.28);transition:transform .15s,box-shadow .2s,background .2s}
+html[data-theme=app] :is(.btn,.go,.pdone):hover{background:var(--brown2);transform:translateY(-1px)}
+html[data-theme=app] .btn.line{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+html[data-theme=app] .btn.ok{background:var(--brown)}
+
+/* inspiration tiles – softer, warm */
+html[data-theme=app] .ins-ph{border-radius:22px;filter:saturate(.55) sepia(.18);box-shadow:var(--sh)}
+html[data-theme=app] .ins b{color:var(--ink2);font-weight:600}
+
+/* featured destinations – horizontal row with label on photo + heart */
+html[data-theme=app] .pop{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,30%);grid-template-columns:none;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 18px;margin-bottom:56px;scrollbar-width:none}
+html[data-theme=app] .pop::-webkit-scrollbar{display:none}
+html[data-theme=app] .pc{height:auto;aspect-ratio:3/4;border-radius:24px;box-shadow:var(--sh);background:linear-gradient(160deg,#b9a690,#7a5c45);scroll-snap-align:start}
+html[data-theme=app] .pc::after{background:linear-gradient(180deg,rgba(40,25,10,0) 45%,rgba(40,25,10,.55) 100%)}
+html[data-theme=app] .pc .t{bottom:14px;inset-inline:14px;background:rgba(255,250,242,.2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.3);border-radius:16px;padding:10px 12px}
+html[data-theme=app] .pc .t b{font-size:24px;line-height:1.1}
+html[data-theme=app] .pc .t span{font-size:13px;margin-top:2px}
+html[data-theme=app] .pheart{position:absolute;z-index:3;top:12px;inset-inline-end:12px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(255,250,242,.85);color:var(--brown);font-size:18px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer}
+html[data-theme=app] .pheart.on{color:#c2513c}
+@media(max-width:900px){html[data-theme=app] .pop{grid-auto-columns:46%}}
+
 /* cards */
-html[data-theme=app] :is(.rv,.pl,.q){border:0;border-radius:var(--r);box-shadow:var(--sh);background:#fff}
-html[data-theme=app] .pl .ph{border-radius:0;filter:saturate(.82)}
+html[data-theme=app] :is(.rv,.pl,.q){border:0;border-radius:var(--r);box-shadow:var(--sh);background:var(--card)}
+html[data-theme=app] .pl .ph{border-radius:0;filter:saturate(.55) sepia(.15)}
 html[data-theme=app] .pl .ph.img{filter:none}
-html[data-theme=app] .pl .k{color:#3e8f98;font-size:.82rem}
+html[data-theme=app] .pl .k{color:var(--brown);font-size:.8rem;letter-spacing:.02em}
 html[data-theme=app] .pl p{color:var(--ink2)}
 html[data-theme=app] .pl .acts{display:flex;flex-wrap:wrap;gap:6px 14px}
-html[data-theme=app] .pl .acts :is(a,button){text-decoration:none;color:var(--jade);font-weight:600;font-size:.88rem;background:none;border:0;padding:0;cursor:pointer}
-html[data-theme=app] .revbtn{border-radius:999px;border-color:#cfe6e8;background:#f3fafa;color:#0a5f6b}
-html[data-theme=app] .pc{border-radius:22px;box-shadow:var(--sh);background:linear-gradient(160deg,#7fb9bf,#2f7f89)}
-html[data-theme=app] .ins-ph{border-radius:20px;filter:saturate(.8);box-shadow:var(--sh)}
+html[data-theme=app] .pl .acts :is(a,button){text-decoration:none;color:var(--brown);font-weight:600;font-size:.88rem;background:none;border:0;padding:0;cursor:pointer}
+html[data-theme=app] .revbtn{border-radius:999px;border:1px solid var(--line);background:var(--sand2);color:var(--brown2)}
 html[data-theme=app] .tag{border-radius:999px;background:var(--soft);color:var(--ink2)}
-html[data-theme=app] .av{background:var(--jade2);color:#0a5f6b;font-family:"Varela Round",sans-serif}
-html[data-theme=app] .stars{color:#e0a43a}
-html[data-theme=app] .write{background:#f7f4ee;border-radius:28px}
-html[data-theme=app] .empty{border:1px dashed #e2ddd5;background:#fdfbf8;border-radius:var(--r);color:var(--muted)}
-html[data-theme=app] .stat{border-radius:18px}
+html[data-theme=app] .av{background:var(--sand2);color:var(--brown2);border:0;font-family:"Frank Ruhl Libre",serif}
+html[data-theme=app] .stars{color:var(--sand)}
+html[data-theme=app] .write{background:var(--soft);border-radius:30px}
+html[data-theme=app] .empty{border:1px dashed #d9ccb9;background:rgba(255,252,247,.6);border-radius:var(--r);color:var(--muted)}
+html[data-theme=app] .why span{background:var(--jade2);color:#095a65}
+
 /* AI box */
-html[data-theme=app] .aibox{border:0;border-radius:var(--r);background:linear-gradient(135deg,#eef7f6,#fbf8f2);box-shadow:var(--sh);padding:20px 22px}
-html[data-theme=app] .aipicks li{background:#fff;border-radius:14px;padding:12px 14px;list-style-position:inside;box-shadow:0 1px 3px rgba(38,48,47,.05)}
+html[data-theme=app] .aibox{border:0;border-radius:var(--r);background:linear-gradient(145deg,#fffcf7,#f1e7d8);box-shadow:var(--sh);padding:22px}
+html[data-theme=app] .aibox h3{color:var(--ink);font-size:1.35rem}
+html[data-theme=app] .ainote{color:var(--muted)}
 html[data-theme=app] .aipicks{padding:0}
-html[data-theme=app] .ainav{background:var(--jade);color:#fff!important;border-radius:999px;padding:4px 14px;text-decoration:none}
-html[data-theme=app] .why span{background:#eaf5f4}
-/* top bar & footer */
-html[data-theme=app] .topbar{background:rgba(255,254,252,.9);border-bottom-color:#efece7}
-html[data-theme=app] .brand{font-family:"Varela Round",sans-serif}
-html[data-theme=app] footer{color:var(--muted)}
-html[data-theme=app] .pdone{box-shadow:0 6px 16px rgba(11,122,138,.22)}
-@media (prefers-reduced-motion:reduce){html[data-theme=app] :is(.btn,.go):hover{transform:none}}
+html[data-theme=app] .aipicks li{background:var(--card);border-radius:16px;padding:12px 14px;list-style-position:inside;box-shadow:0 1px 3px rgba(60,40,20,.06)}
+html[data-theme=app] .aipicks a{color:var(--ink)}
+html[data-theme=app] .ainav{background:var(--brown);color:#fff8ee!important;border-radius:999px;padding:4px 14px;text-decoration:none}
+html[data-theme=app] .aiv{background:var(--jade2);color:#095a65}
+
+/* bottom app bar – phones only */
+.bnav{display:none}
+@media(max-width:760px){
+  .bnav{display:flex;position:fixed;z-index:120;bottom:max(12px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(420px,calc(100vw - 28px));justify-content:space-around;
+    background:rgba(255,250,242,.78);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);border:1px solid rgba(122,92,69,.12);border-radius:26px;padding:7px 6px;box-shadow:0 12px 34px rgba(40,25,10,.18)}
+  .bnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:var(--muted);font:600 11.5px Assistant,sans-serif;padding:7px 0;border-radius:18px;cursor:pointer}
+  .bnav button.on{background:var(--brown);color:#fff8ee}
+  body{padding-bottom:96px}
+  .a11ybtn{bottom:100px!important}
+  .a11ypanel{bottom:160px!important}
+  #toast,.toast{bottom:104px!important}
+}
+html.a11y-contrast .bnav{background:#000;color:#fff}
+@media(prefers-reduced-motion:reduce){html[data-theme=app] :is(.btn,.go,.pdone):hover{transform:none}}
+html[data-theme=app] .cover .art .artwait{background:linear-gradient(150deg,#c9b8a2 0%,#9a7f66 55%,#6d5444 100%)}
+html[data-theme=app] .ins-ph{filter:saturate(.42) sepia(.22) brightness(1.03)}
+html[data-theme=app] .authcard h3{font-family:"Frank Ruhl Libre",serif;font-weight:500;color:var(--ink)}
+html[data-theme=app] .authcard{background:var(--card);border-radius:26px}
+html[data-theme=app] .atabs button.on{color:var(--brown2)}
+html[data-theme=app] .a11ybtn{background:var(--brown2)}
