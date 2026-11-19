@@ -434,9 +434,9 @@ function render() {
   const emptyWeb = () => {
     const g = (q) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q + ' ' + dest.enName);
     const k = F.prefs.has('kosher') || F.prefs.has('shabbat');
-    return `<div class="empty" style="grid-column:1/-1"><b>${osmFail ? 'לא הצלחנו לטעון כרגע את המקומות מהמפה' : 'לא מצאנו מקומות שמתאימים לסינון'}</b>`
-      + `${osmFail ? '<button class="navlink" id="osmRetry">נסו שוב</button> ' : 'נסו להסיר חלק מהסינונים. '}`
-      + (k ? `<a href="${g('kosher restaurant')}" target="_blank" rel="noopener">מסעדות כשרות בגוגל מפות</a> · <a href="${g('Chabad')}" target="_blank" rel="noopener">בית חב"ד בגוגל מפות</a>` : '') + '</div>';
+    return `<div class="empty" style="grid-column:1/-1"><b>${osmFail ? 'לא הצלחנו לטעון כרגע את המקומות מהמפה' : 'אין ברשימה הזו מקומות שמתאימים לסינון'}</b>`
+      + `${osmFail ? '<button class="navlink" id="osmRetry">נסו שוב</button> ' : 'ההמלצות של ה-AI למעלה מתאימות לסינון שבחרתם. '}`
+      + '</div>';
   };
   const inLang = (w) => !w.wp || w.wp === (isEN ? 'en' : 'he');
   let W = web.filter((w) => inLang(w) && passW(w));
@@ -583,6 +583,13 @@ async function loadOSM(d) {
   const R = 20000, at = `(around:${R},${d.lat},${d.lon})`;
   const q = '[out:json][timeout:20];' + OSM_SETS.map(([k, f], i) => `nwr${f}${at}->.s${i};.s${i} out center tags 40;`).join('');
   osmFail = false;
+  // קודם דרך השרת שלנו (שומר תוצאות, אז בפעם הבאה זה מיידי), ואם לא – ישירות
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 35000);
+    const r = await fetch(`${SERVER_URL}/places?lat=${d.lat}&lon=${d.lon}`, { signal: ctl.signal });
+    clearTimeout(t);
+    if (r.ok) { const els = (await r.json()).elements || []; const seen = new Set(); return els.filter((e) => e.tags && e.tags.name && !seen.has(e.id) && seen.add(e.id)).map(osmItem); }
+  } catch (e) {}
   // כמה שרתים של OpenStreetMap: אם אחד עמוס או איטי, מנסים את הבא
   for (const base of ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter']) {
     try {
@@ -658,13 +665,13 @@ window.addEventListener('langchange', async () => { // החלפת שפה בלי 
 // ה-AI בוחר רק מתוך המקומות האמיתיים שנאספו (לא ממציא מקומות ולא כותב ביקורות), ומסביר למה כל אחד מתאים
 let aiT = 0, aiKey = '', aiData = null, aiLoading = false;
 function scheduleAI() {
-  if (!dest || loadingW || !web.length) { $('aiBox').classList.add('hidden'); return; }
+  if (!dest || loadingW) { $('aiBox').classList.add('hidden'); return; }
   const inLang = (w) => !w.wp || w.wp === (isEN ? 'en' : 'he');
   const pool = web.filter((w) => inLang(w) && (!F.cat || w.cat === F.cat));
   const good = pool.filter(passW), rest = pool.filter((w) => !passW(w));
   const list = [...good, ...rest].slice(0, 50);
   const m = months();
-  const body = { lang: isEN ? 'en' : 'he', dest: dest.enName, country: dest.country, month: m ? [...m][0] : 0, trip: F.trip, cat: F.cat, prefs: [...F.prefs],
+  const body = { lang: isEN ? 'en' : 'he', dest: dest.enName, country: dest.country, lat: dest.lat, lon: dest.lon, month: m ? [...m][0] : 0, trip: F.trip, cat: F.cat, prefs: [...F.prefs],
     places: list.map((w) => { const tg = wTags(w).filter((t) => KW[t] || (w.tags || []).includes(t)); return { n: w.name, c: w.cat, t: (tg.length ? '[' + tg.join(',') + '] ' : '') + wText(w).slice(0, 120) }; }) };
   const key = JSON.stringify(body);
   if (key === aiKey) { drawAI(); return; }
@@ -688,8 +695,8 @@ function drawAI() {
   const g = (n) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(n + ' ' + dest.enName);
   box.classList.remove('hidden');
   box.innerHTML = `<h3><span aria-hidden="true">✨</span> המלצות AI בשבילכם</h3>
-    <p class="ainote">נבחר אוטומטית על ידי בינה מלאכותית מתוך המקומות שלמטה, לפי היעד, התאריכים, אופי הטיול והסינון. אלה לא ביקורות של מטיילים. בדקו פרטים, שעות וכשרות מול המקום עצמו.</p>
-    ${aiData.picks.length ? `<ol class="aipicks">${aiData.picks.map((p) => `<li><a href="${g(p.name)}" target="_blank" rel="noopener"><b>${esc(p.name)}</b></a><span>${esc(p.why)}</span></li>`).join('')}</ol>` : ''}
+    <p class="ainote">נבחר על ידי בינה מלאכותית לפי היעד, התאריכים, אופי הטיול והסינון. מקומות שה-AI הציע נבדקו מול המפה ומוצגים רק אם נמצאו. אלה לא ביקורות של מטיילים, אז בדקו שעות וכשרות מול המקום עצמו.</p>
+    ${aiData.picks.length ? `<ol class="aipicks">${aiData.picks.map((p) => `<li><b>${esc(p.name)}</b>${p.verified ? ' <i class="aiv">✓ נמצא במפה</i>' : ''}<span>${esc(p.why)}</span>${p.address ? `<small class="aiaddr">📍 ${esc(p.address)}</small>` : ''}<a class="ainav" href="${p.lat ? `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}` : g(p.name)}" target="_blank" rel="noopener">ניווט</a></li>`).join('')}</ol>` : ''}
     ${aiData.tips?.length ? `<div class="aitips"><b>טיפים לטיול שלכם</b><ul>${aiData.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}`;
 }
 
