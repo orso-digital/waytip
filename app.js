@@ -383,7 +383,17 @@ function drawFilters() {
 $('clearF').onclick = () => { F = { trip: '', cat: '', prefs: new Set() }; loadWeather(); render(); };
 const passR = (r) => (!F.trip || r.trip === F.trip) && (!F.cat || r.cat === F.cat) && [...F.prefs].every((p) => (r.tags || []).includes(p));
 const placeTags = (t) => Object.keys(KW).filter((k) => KW[k].test(t));
-const wTags = (w) => [...new Set([...(w.tags || []), ...placeTags(w.text || '')])];
+const wTags = (w) => [...new Set([...(w.tags || []), ...placeTags((w.name || '') + ' ' + (w.text || '') + ' ' + (w.he || ''))])];
+// למה המקום מתאים לסינון: מה סומן ב-OpenStreetMap ומה מוזכר בתיאור
+function why(w) {
+  const out = [];
+  if (F.cat && w.cat === F.cat) out.push([T[F.cat], '']);
+  for (const p of F.prefs) {
+    if ((w.tags || []).includes(p)) out.push([T[p], w.osm ? 'מסומן במפה' : '']);
+    else if (wTags(w).includes(p)) out.push([T[p], 'מוזכר בתיאור']);
+  }
+  return out;
+}
 const passW = (w) => (!F.cat || w.cat === F.cat) && [...F.prefs].every((p) => wTags(w).includes(p));
 const wText = (w) => w.osm ? w.text : ((!isEN && w.he) ? w.he : (w.text || ''));
 
@@ -415,20 +425,27 @@ function render() {
   document.querySelectorAll('[data-rep]').forEach((b) => b.onclick = () => report(b.dataset.rep));
 
   const DIET = ['kosher', 'vegan', 'vegetarian', 'glutenfree', 'halal'];
+  const emptyWeb = () => {
+    const g = (q) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q + ' ' + dest.enName);
+    const k = F.prefs.has('kosher') || F.prefs.has('shabbat');
+    return `<div class="empty" style="grid-column:1/-1"><b>${osmFail ? 'לא הצלחנו לטעון כרגע את המקומות מהמפה' : 'לא מצאנו מקומות שמתאימים לסינון'}</b>`
+      + `${osmFail ? '<button class="navlink" id="osmRetry">נסו שוב</button> ' : 'נסו להסיר חלק מהסינונים. '}`
+      + (k ? `<a href="${g('kosher restaurant')}" target="_blank" rel="noopener">מסעדות כשרות בגוגל מפות</a> · <a href="${g('Chabad')}" target="_blank" rel="noopener">בית חב"ד בגוגל מפות</a>` : '') + '</div>';
+  };
   const inLang = (w) => !w.wp || w.wp === (isEN ? 'en' : 'he');
-  let W = web.filter((w) => inLang(w) && passW(w)), relaxed = false;
+  let W = web.filter((w) => inLang(w) && passW(w));
   if ([...F.prefs].some((p) => DIET.includes(p))) W.sort((a, b) => (b.osm ? 1 : 0) - (a.osm ? 1 : 0));
-  if (!W.length && web.length && (F.prefs.size || F.cat)) { W = web.filter(inLang); relaxed = true; }
-  $('webSub').textContent = !web.length ? '' : relaxed ? `לא מצאנו מקומות שמתאימים בדיוק לסינון, אז הנה כל ${W.length} המקומות המומלצים. בדקו מול המקום אם הוא מתאים לכם.` : `${W.length} מקומות${active ? ' שמתאימים לסינון' : ''}`;
+  $('webSub').textContent = !web.length ? '' : `${W.length} מקומות${active ? ' שמתאימים לסינון' : ''}`;
   $('web').innerHTML = loadingW ? loaderBlock('אוספים המלצות מהרשת…') : W.slice(0, 60).map((w) => {
     const g = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((w.enTitle || w.name) + ' ' + dest.enName);
     const diet = wTags(w).filter((t) => DIET.includes(t)).map((t) => ' · ' + T[t]).join('');
-    const tx = wText(w);
-    return `<article class="pl"><div class="ph${w.img ? ' img' : ''}"${w.img ? ` style="background-image:url('${esc(w.img)}')"` : ''}>${w.img ? '' : mini(w.cat)}</div><span class="k">${T[w.cat]}${diet}${w.osm ? ' · <i class="osm">OpenStreetMap</i>' : w.wp ? ' · <i class="osm">ויקיפדיה</i>' : ''}</span><h4>${esc(w.name)}</h4>${tx ? `<p>${esc(tx.slice(0, 240))}${tx.length > 240 ? '…' : ''}</p>` : ''}
+    const tx = wText(w), y = why(w);
+    return `<article class="pl"><div class="ph${w.img ? ' img' : ''}"${w.img ? ` style="background-image:url('${esc(w.img)}')"` : ''}>${w.img ? '' : mini(w.cat)}</div><span class="k">${T[w.cat]}${diet}${w.osm ? ' · <i class="osm">OpenStreetMap</i>' : w.wp ? ' · <i class="osm">ויקיפדיה</i>' : ''}</span><h4>${esc(w.name)}</h4>${y.length ? `<div class="why"><b>מתאים לכם:</b> ${y.map(([t, src]) => `<span>✓ <em>${esc(t)}</em>${src ? ` <small>${src}</small>` : ''}</span>`).join('')}</div>` : ''}${tx ? `<p>${esc(tx.slice(0, 240))}${tx.length > 240 ? '…' : ''}</p>` : ''}
       <button class="revbtn" data-q="${esc(w.name + ', ' + dest.enName)}"><span aria-hidden="true">★</span> דירוג וביקורות</button>
       <div class="acts"><a href="${g}" target="_blank" rel="noopener">ביקורות בגוגל</a><a href="https://www.tripadvisor.com/Search?q=${encodeURIComponent(w.name + ' ' + dest.enName)}" target="_blank" rel="noopener">טריפאדווייזר</a>${/^https?:\/\//.test(w.url) ? `<a href="${esc(w.url)}" target="_blank" rel="noopener">${w.wp ? 'ויקיפדיה' : 'אתר'}</a>` : ''}
       <button data-w="${esc(w.name)}" data-c="${w.cat}">כתבו המלצה</button></div></article>`;
-  }).join('') || `<div class="empty" style="grid-column:1/-1"><b>${web.length ? 'לא נמצאו מקומות' : 'אין מידע מפורט ליעד הזה'}</b>${web.length ? 'נסו סינון אחר' : 'ביעדים גדולים המידע מחולק לשכונות, ראו בקישור למטה'}</div>`;
+  }).join('') || (web.length || osmFail ? emptyWeb() : `<div class="empty" style="grid-column:1/-1"><b>אין מידע מפורט ליעד הזה</b>ראו בקישור למטה</div>`);
+  if ($('osmRetry')) $('osmRetry').onclick = () => loadWeb();
   document.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { $('fPlace').value = b.dataset.w; $('fCat').value = b.dataset.c; $('s-write').scrollIntoView({ behavior: 'smooth' }); });
 }
 
@@ -553,18 +570,26 @@ const OSM_SETS = [
   ['kosher', '["diet:kosher"~"^(yes|only)$"]'], ['vegan', '["diet:vegan"~"^(yes|only)$"]'], ['glutenfree', '["diet:gluten_free"~"^(yes|only)$"]'],
   ['halal', '["diet:halal"~"^(yes|only)$"]'], ['vegetarian', '["diet:vegetarian"="only"]'], ['jewish', '["amenity"="place_of_worship"]["religion"="jewish"]'],
 ];
+let osmFail = false;
 async function loadOSM(d) {
   if (d.lat == null) return [];
   const R = 20000, at = `(around:${R},${d.lat},${d.lon})`;
   const q = '[out:json][timeout:20];' + OSM_SETS.map(([k, f], i) => `nwr${f}${at}->.s${i};.s${i} out center tags 40;`).join('');
-  try {
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 9000);
-    const r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctl.signal });
-    clearTimeout(t);
-    const els = (await r.json()).elements || [];
-    const seen = new Set();
-    return els.filter((e) => e.tags && e.tags.name && !seen.has(e.id) && seen.add(e.id)).map(osmItem);
-  } catch (e) { return []; }
+  osmFail = false;
+  // כמה שרתים של OpenStreetMap: אם אחד עמוס או איטי, מנסים את הבא
+  for (const base of ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter']) {
+    try {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 12000);
+      const r = await fetch(base, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctl.signal });
+      clearTimeout(t);
+      if (!r.ok) continue;
+      const els = (await r.json()).elements || [];
+      const seen = new Set();
+      return els.filter((e) => e.tags && e.tags.name && !seen.has(e.id) && seen.add(e.id)).map(osmItem);
+    } catch (e) {}
+  }
+  osmFail = true;
+  return [];
 }
 function osmItem(e) {
   const g = e.tags;

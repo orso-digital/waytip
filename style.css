@@ -511,3 +511,5 @@ html.a11y-contrast .topbar{background:#000!important}
 .credits summary{cursor:pointer}
 .credits ul{margin:6px 0 0;padding-inline-start:18px}
 .ph.img{background-size:cover;background-position:center}
+.why{margin:2px 0 8px;font-size:.86rem;color:#1d6b62;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}.why span{background:#e6f4f1;border-radius:20px;padding:1px 8px}
+.why small{color:#5b7c78;font-size:.75rem}.why em{font-style:normal}

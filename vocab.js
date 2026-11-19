@@ -25,14 +25,14 @@ export const T = Object.fromEntries([...TRIPS, ...CATS, ...PREFS]);
 
 // מילות מפתח לסינון המקומות מהרשת (התיאורים באנגלית)
 export const KW = {
-  kosher: /kosher/i, vegan: /vegan|plant-based/i, vegetarian: /vegetarian|vegan|veggie/i, glutenfree: /gluten/i, halal: /halal/i,
-  free: /\bfree\b|no charge|free entry|free admission/i, budget: /cheap|budget|inexpensive|affordable|bargain/i,
-  mid: /moderate|mid-range|reasonabl/i, luxury: /luxur|upscale|fine dining|michelin|elegant|five-star|5-star/i,
-  kids: /kids|children|family|families|zoo|playground|aquarium/i, babies: /stroller|pram|baby|babies|infant/i,
-  access: /wheelchair|accessible/i, pets: /\bdogs?\b|pet-friendly|pets/i, shabbat: /chabad|synagogue|kosher|shabbat/i,
-  hebrew: /hebrew|israeli/i, romantic: /romantic|sunset|candle/i, quiet: /quiet|peaceful|tranquil|calm/i,
-  view: /view|panoram|lookout|viewpoint/i, local: /local|authentic|traditional|off the beaten/i,
-  rainy: /indoor|museum|gallery|covered|aquarium|mall/i,
+  kosher: /kosher|(?:^|[^א-ת])כשר(?:ה|ות|ים)?(?![א-ת])/i, vegan: /vegan|plant-based|טבעונ/i, vegetarian: /vegetarian|vegan|veggie|צמחונ|טבעונ/i, glutenfree: /gluten|גלוטן/i, halal: /halal|חלאל/i,
+  free: /\bfree\b|no charge|free entry|free admission|כניסה חופשית|ללא תשלום|בחינם/i, budget: /cheap|budget|inexpensive|affordable|bargain|זול|במחיר נמוך/i,
+  mid: /moderate|mid-range|reasonabl/i, luxury: /luxur|upscale|fine dining|michelin|elegant|five-star|5-star|יוקרה|מישלן/i,
+  kids: /kids|children|family|families|zoo|playground|aquarium|ילדים|משפחות|גן חיות|אקווריום|מגרש משחקים/i, babies: /stroller|pram|baby|babies|infant|תינוק|עגלה/i,
+  access: /wheelchair|accessible|נגיש|כיסא גלגלים/i, pets: /\bdogs?\b|pet-friendly|pets/i, shabbat: /chabad|synagogue|kosher|shabbat|חב"ד|בית כנסת|(?:^|[^א-ת])כשר(?:ה|ות|ים)?(?![א-ת])|שבת/i,
+  hebrew: /hebrew|israeli|עברית|ישראלי/i, romantic: /romantic|sunset|candle|רומנטי|שקיעה/i, quiet: /quiet|peaceful|tranquil|calm|שקט|רגוע/i,
+  view: /view|panoram|lookout|viewpoint|תצפית|נוף(?!ש)|פנורמ/i, local: /local|authentic|traditional|off the beaten|מקומי|אותנטי|מסורתי/i,
+  rainy: /indoor|museum|gallery|covered|aquarium|mall|מקורה|מוזיאון|גלריה|אקווריום|קניון/i,
 };
 
 // שיוך מקום מ-Wikivoyage לקטגוריה
