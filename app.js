@@ -1,18 +1,18 @@
-import { isEN, startI18n, langButton } from './i18n.js?v=2611200113';
-import { searchExtra, extraById, searchPop } from './places.js?v=2611200113';
-import './a11y.js?v=2611200113';
+import { isEN, startI18n, langButton } from './i18n.js?v=2611200125';
+import { searchExtra, extraById, searchPop } from './places.js?v=2611200125';
+import './a11y.js?v=2611200125';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
   addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
-} from './firebase.js?v=2611200113';
-import { openAuth } from './account.js?v=2611200113';
-import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200113';
-import { SERVER_URL, SITE_NAME } from './config.js?v=2611200113';
-import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200113';
-import { parseVideo, videoButton } from './video.js?v=2611200113';
-import './reviews-web.js?v=2611200113';
-import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200113';
-import { mini, TRIP_ICON } from './covers.js?v=2611200113';
+} from './firebase.js?v=2611200125';
+import { openAuth } from './account.js?v=2611200125';
+import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200125';
+import { SERVER_URL, SITE_NAME } from './config.js?v=2611200125';
+import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200125';
+import { parseVideo, videoButton } from './video.js?v=2611200125';
+import './reviews-web.js?v=2611200125';
+import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200125';
+import { mini, TRIP_ICON } from './covers.js?v=2611200125';
 import { startRegistration, startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
 
 const $ = (id) => document.getElementById(id);
@@ -188,7 +188,7 @@ function paint(el, en, country, alt, fallback = 'see', hero = false) {
     setTimeout(() => { if (mine === el._p) el.querySelectorAll('.artwait').forEach((x) => x.remove()); }, 700);
   });
 }
-const flag = (cc) => cc ? `<img src="https://flagcdn.com/w80/${cc.toLowerCase()}.png" alt="דגל">` : '';
+function flag(cc) { return cc ? `<img src="https://flagcdn.com/w80/${cc.toLowerCase()}.png" alt="דגל">` : ''; }
 
 // ================= דף הבית =================
 const POPULAR = [
@@ -815,7 +815,7 @@ try { (() => {
   requestAnimationFrame(place); addEventListener('resize', place);
   // בגלילה למטה התפריט מתכווץ, בגלילה למעלה חוזר
   let lastY = scrollY;
-  addEventListener('scroll', () => { const y = scrollY; if (Math.abs(y - lastY) < 8) return; nb.classList.toggle('mini', y > lastY && y > 120); lastY = y; requestAnimationFrame(place); }, { passive: true });
+  addEventListener('scroll', () => { const y = scrollY; if (Math.abs(y - lastY) < 28) return; const want = y > lastY && y > 160; if (want !== nb.classList.contains('mini')) nb.classList.toggle('mini', want); lastY = y; }, { passive: true });
   nb.addEventListener('transitionend', place);
   $('bnHome').onclick = () => { $('home').click(); on('bnHome'); };
   $('bnSearch').onclick = () => { if (!$('destPage').classList.contains('hidden')) $('home').click(); setTimeout(() => { $('wz').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); on('bnSearch'); };
