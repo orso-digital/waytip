@@ -446,6 +446,7 @@ function render() {
       <button data-w="${esc(w.name)}" data-c="${w.cat}">כתבו המלצה</button></div></article>`;
   }).join('') || (web.length || osmFail ? emptyWeb() : `<div class="empty" style="grid-column:1/-1"><b>אין מידע מפורט ליעד הזה</b>ראו בקישור למטה</div>`);
   if ($('osmRetry')) $('osmRetry').onclick = () => loadWeb();
+  scheduleAI();
   document.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { $('fPlace').value = b.dataset.w; $('fCat').value = b.dataset.c; $('s-write').scrollIntoView({ behavior: 'smooth' }); });
 }
 
@@ -645,6 +646,46 @@ window.addEventListener('langchange', async () => { // החלפת שפה בלי 
     render();
   }
 });
+
+
+// ================= המלצות AI לפי החיפוש והסינון =================
+// ה-AI בוחר רק מתוך המקומות האמיתיים שנאספו (לא ממציא מקומות ולא כותב ביקורות), ומסביר למה כל אחד מתאים
+let aiT = 0, aiKey = '', aiData = null, aiLoading = false;
+function scheduleAI() {
+  if (!dest || loadingW || !web.length) { $('aiBox').classList.add('hidden'); return; }
+  const inLang = (w) => !w.wp || w.wp === (isEN ? 'en' : 'he');
+  const pool = web.filter((w) => inLang(w) && (!F.cat || w.cat === F.cat));
+  const good = pool.filter(passW), rest = pool.filter((w) => !passW(w));
+  const list = [...good, ...rest].slice(0, 50);
+  const m = months();
+  const body = { lang: isEN ? 'en' : 'he', dest: dest.enName, country: dest.country, month: m ? [...m][0] : 0, trip: F.trip, cat: F.cat, prefs: [...F.prefs],
+    places: list.map((w) => { const tg = wTags(w).filter((t) => KW[t] || (w.tags || []).includes(t)); return { n: w.name, c: w.cat, t: (tg.length ? '[' + tg.join(',') + '] ' : '') + wText(w).slice(0, 120) }; }) };
+  const key = JSON.stringify(body);
+  if (key === aiKey) { drawAI(); return; }
+  clearTimeout(aiT);
+  aiT = setTimeout(async () => {
+    aiKey = key; aiLoading = true; aiData = null; drawAI();
+    try {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 30000);
+      const r = await fetch(SERVER_URL + '/ai/recs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: key, signal: ctl.signal });
+      clearTimeout(t);
+      const d = await r.json();
+      if (aiKey === key) aiData = d.off ? null : d;
+    } catch (e) { if (aiKey === key) aiData = null; }
+    if (aiKey === key) { aiLoading = false; drawAI(); }
+  }, 700);
+}
+function drawAI() {
+  const box = $('aiBox');
+  if (aiLoading) { box.classList.remove('hidden'); box.innerHTML = `<h3><span aria-hidden="true">✨</span> המלצות AI בשבילכם</h3>${loaderBlock('ה-AI בוחר מקומות שמתאימים לחיפוש שלכם…')}`; return; }
+  if (!aiData || (!aiData.picks?.length && !aiData.tips?.length)) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  const g = (n) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(n + ' ' + dest.enName);
+  box.classList.remove('hidden');
+  box.innerHTML = `<h3><span aria-hidden="true">✨</span> המלצות AI בשבילכם</h3>
+    <p class="ainote">נבחר אוטומטית על ידי בינה מלאכותית מתוך המקומות שלמטה, לפי היעד, התאריכים, אופי הטיול והסינון. אלה לא ביקורות של מטיילים. בדקו פרטים, שעות וכשרות מול המקום עצמו.</p>
+    ${aiData.picks.length ? `<ol class="aipicks">${aiData.picks.map((p) => `<li><a href="${g(p.name)}" target="_blank" rel="noopener"><b>${esc(p.name)}</b></a><span>${esc(p.why)}</span></li>`).join('')}</ol>` : ''}
+    ${aiData.tips?.length ? `<div class="aitips"><b>טיפים לטיול שלכם</b><ul>${aiData.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}`;
+}
 
 // ================= טופס המלצה =================
 $('fCat').innerHTML = CATS.map(([k, v]) => `<option value="${k}">${v}</option>`).join('');

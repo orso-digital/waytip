@@ -513,3 +513,10 @@ html.a11y-contrast .topbar{background:#000!important}
 .ph.img{background-size:cover;background-position:center}
 .why{margin:2px 0 8px;font-size:.86rem;color:#1d6b62;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}.why span{background:#e6f4f1;border-radius:20px;padding:1px 8px}
 .why small{color:#5b7c78;font-size:.75rem}.why em{font-style:normal}
+.aibox{margin:0 0 18px;padding:16px 18px;border-radius:14px;background:linear-gradient(135deg,#eef8f6,#f6fbfa);border:1px solid #cfe7e2}
+.aibox h3{margin:0 0 4px;font-size:1.1rem;color:#174f49}
+.ainote{margin:0 0 10px;font-size:.8rem;color:#5b7c78}
+.aipicks{margin:0;padding-inline-start:20px;display:grid;gap:8px}
+.aipicks li span{display:block;font-size:.9rem;color:#33514d}
+.aipicks a{color:#174f49}
+.aitips{margin-top:12px;font-size:.9rem}.aitips ul{margin:4px 0 0;padding-inline-start:18px}
