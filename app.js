@@ -219,11 +219,16 @@ function wzShow() {
 function pick(p) {
   W.id = p.id;
   $('sug').classList.add('hidden');
-  $('q').value = p.name;
+  $('q').value = p.name; $('q').blur();
   $('picked').innerHTML = `<span class="flag" style="box-shadow:0 0 0 1px #cfe0dc">${flag(p.country_code)}</span>${esc(p.name)}${p.country ? ', ' + esc(p.country) : ''}<button type="button" id="unpick">שינוי</button>`;
   $('picked').classList.remove('hidden');
   $('unpick').onclick = () => { W.id = null; $('picked').classList.add('hidden'); $('q').value = ''; $('q').focus(); };
 }
+// בטלפון: כשהמקלדת נפתחת, מזיזים את הדף בעדינות כך ששדה היעד נשאר מתחת לסרגל העליון (בלי קפיצה)
+$('q').addEventListener('focus', () => {
+  if (innerWidth > 900) return;
+  setTimeout(() => { const top = $('q').getBoundingClientRect().top + scrollY - 150; window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); }, 250);
+});
 $('q').addEventListener('input', () => {
   W.id = null; $('picked').classList.add('hidden');
   clearTimeout(timer);
@@ -307,6 +312,7 @@ const fmt = (s) => { const d = new Date(s); return d.getDate() + ' ב' + MONTHS[
 // ================= כפתורי סינון =================
 let openP='';
 document.querySelectorAll('.fbtn').forEach(b=>b.onclick=e=>{e.stopPropagation();openP=openP===b.dataset.p?'':b.dataset.p;showPanels()});
+document.querySelectorAll('.pdone').forEach(b=>b.onclick=()=>{openP='';showPanels();document.querySelector('.fbar').scrollIntoView({behavior:'smooth',block:'nearest'})});
 function showPanels(){document.querySelectorAll('.fbtn').forEach(b=>{b.classList.toggle('open',b.dataset.p===openP);b.setAttribute('aria-expanded',b.dataset.p===openP)});document.querySelectorAll('[data-panel]').forEach(p=>p.classList.toggle('hidden',p.dataset.panel!==openP))}
 document.addEventListener('click',e=>{if(openP&&!e.composedPath().some(n=>n.classList&&n.classList.contains('fbar'))){openP='';showPanels()}});
 function labels(){
