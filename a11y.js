@@ -37,7 +37,36 @@ function open(on) {
   panel.classList.toggle('hidden', !on); btn.setAttribute('aria-expanded', on);
   if (on) panel.querySelector('button').focus(); else btn.focus();
 }
-btn.onclick = () => open(panel.classList.contains('hidden'));
+// אפשר לגרור את הכפתור לכל מקום במסך; המיקום נשמר. לחיצה רגילה פותחת את התפריט
+let dragged = false;
+btn.onclick = (e) => { if (dragged) { e.preventDefault(); dragged = false; return; } open(panel.classList.contains('hidden')); };
+(() => {
+  const KEY = 'waytip.a11yPos';
+  const clamp = (x, y) => [Math.min(Math.max(6, x), innerWidth - btn.offsetWidth - 6), Math.min(Math.max(6, y), innerHeight - btn.offsetHeight - 6)];
+  const setPos = (x, y) => { [x, y] = clamp(x, y); btn.style.left = x + 'px'; btn.style.top = y + 'px'; btn.style.bottom = 'auto'; btn.style.right = 'auto'; btn.classList.add('moved'); return [x, y]; };
+  try { const p = JSON.parse(localStorage.getItem(KEY) || 'null'); if (p) requestAnimationFrame(() => setPos(p[0] * innerWidth, p[1] * innerHeight)); } catch (e) {}
+  let sx = 0, sy = 0, ox = 0, oy = 0, id = null, moving = false;
+  btn.addEventListener('pointerdown', (e) => { id = e.pointerId; sx = e.clientX; sy = e.clientY; const r = btn.getBoundingClientRect(); ox = r.left; oy = r.top; moving = false; });
+  addEventListener('pointermove', (e) => {
+    if (e.pointerId !== id) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!moving && Math.hypot(dx, dy) < 8) return;
+    if (!moving) { moving = true; try { btn.setPointerCapture(id); } catch (er) {} btn.classList.add('dragging'); }
+    e.preventDefault(); setPos(ox + dx, oy + dy);
+  });
+  const end = (e) => {
+    if (e.pointerId !== id) return; id = null;
+    if (!moving) return;
+    moving = false; dragged = true; btn.classList.remove('dragging');
+    // נצמד לצד הקרוב של המסך
+    const r = btn.getBoundingClientRect(); const x = r.left + r.width / 2 < innerWidth / 2 ? 12 : innerWidth - r.width - 12;
+    const [fx, fy] = setPos(x, r.top);
+    try { localStorage.setItem(KEY, JSON.stringify([fx / innerWidth, fy / innerHeight])); } catch (er) {}
+    setTimeout(() => { dragged = false; }, 350);
+  };
+  addEventListener('pointerup', end); addEventListener('pointercancel', end);
+  addEventListener('resize', () => { if (btn.classList.contains('moved')) { const r = btn.getBoundingClientRect(); setPos(r.left, r.top); } });
+})();
 panel.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.close !== undefined) return open(false);
