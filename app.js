@@ -1,18 +1,18 @@
-import { isEN, startI18n, langButton } from './i18n.js';
-import { searchExtra, extraById, searchPop } from './places.js';
-import './a11y.js';
+import { isEN, startI18n, langButton } from './i18n.js?v=2611191833';
+import { searchExtra, extraById, searchPop } from './places.js?v=2611191833';
+import './a11y.js?v=2611191833';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
   addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
-} from './firebase.js';
-import { openAuth } from './account.js';
-import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js';
-import { SERVER_URL, SITE_NAME } from './config.js';
-import { loaderBlock, showLoader, hideLoader } from './loader.js';
-import { parseVideo, videoButton } from './video.js';
-import './reviews-web.js';
-import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js';
-import { mini, TRIP_ICON } from './covers.js';
+} from './firebase.js?v=2611191833';
+import { openAuth } from './account.js?v=2611191833';
+import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611191833';
+import { SERVER_URL, SITE_NAME } from './config.js?v=2611191833';
+import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611191833';
+import { parseVideo, videoButton } from './video.js?v=2611191833';
+import './reviews-web.js?v=2611191833';
+import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611191833';
+import { mini, TRIP_ICON } from './covers.js?v=2611191833';
 import { startRegistration, startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
 
 const $ = (id) => document.getElementById(id);
@@ -824,3 +824,4 @@ addEventListener('scroll', () => document.querySelectorAll('.cue').forEach((c) =
 })();
 $('langSlot').replaceWith(langButton());
 startI18n();
+window.__wtReady = true; try { sessionStorage.removeItem('wtReload'); } catch (e) {}
