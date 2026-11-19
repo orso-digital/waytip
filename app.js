@@ -108,9 +108,19 @@ $('saveDest').onclick = async () => {
 // מעירים את השרת ברקע כבר כשהאתר נפתח (בתוכנית החינמית הוא נרדם כשאין שימוש)
 fetch(SERVER_URL + '/').catch(() => {});
 const photoKey = (q, c) => ('v2-' + q + '-' + (c || '')).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120) || 'x';
+// צילומים נבחרים (Wikimedia Commons, נטענים מיד מהשרתים המהירים של ויקימדיה)
+const CURATED = {
+  'Rome': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Colosseum_in_Rome-April_2007-1-_copie_2B.jpg/1280px-Colosseum_in_Rome-April_2007-1-_copie_2B.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Colosseum_in_Rome-April_2007-1-_copie_2B.jpg/1920px-Colosseum_in_Rome-April_2007-1-_copie_2B.jpg', file: 'Colosseum_in_Rome-April_2007-1-_copie_2B.jpg' },
+  'Paris': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Paris_-_The_Eiffel_Tower_in_spring_-_2307.jpg/1280px-Paris_-_The_Eiffel_Tower_in_spring_-_2307.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Paris_-_The_Eiffel_Tower_in_spring_-_2307.jpg/1920px-Paris_-_The_Eiffel_Tower_in_spring_-_2307.jpg', file: 'Paris_-_The_Eiffel_Tower_in_spring_-_2307.jpg' },
+  'Bangkok': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Templo_Wat_Arun%2C_Bangkok%2C_Tailandia%2C_2013-08-22%2C_DD_37.jpg/1280px-Templo_Wat_Arun%2C_Bangkok%2C_Tailandia%2C_2013-08-22%2C_DD_37.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Templo_Wat_Arun%2C_Bangkok%2C_Tailandia%2C_2013-08-22%2C_DD_37.jpg/1920px-Templo_Wat_Arun%2C_Bangkok%2C_Tailandia%2C_2013-08-22%2C_DD_37.jpg', file: 'Templo_Wat_Arun,_Bangkok,_Tailandia,_2013-08-22,_DD_37.jpg' },
+  'New York City': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg/1280px-Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg/1920px-Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg', file: 'Midtown_Manhattan_from_Weehawken_September_2021_HDR.jpg' },
+  'London': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Tower_Bridge_London_Feb_2006.jpg/1280px-Tower_Bridge_London_Feb_2006.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Tower_Bridge_London_Feb_2006.jpg/1920px-Tower_Bridge_London_Feb_2006.jpg', file: 'Tower_Bridge_London_Feb_2006.jpg' },
+  'Barcelona': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Sagrada_Familia_01.jpg/1280px-Sagrada_Familia_01.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Sagrada_Familia_01.jpg/1920px-Sagrada_Familia_01.jpg', file: 'Sagrada_Familia_01.jpg' },
+  'waytip hero': { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg/1280px-Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg', big: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg/1920px-Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg', file: 'Koh_Mak_(island),_Thailand,_Solitary_tree_in_lagoon.jpg' },
+};
 async function wvPhoto(en) {
   try {
-    const v = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail|original|name&pithumbsize=2000&titles=${encodeURIComponent(en)}&redirects=1&format=json&origin=*`)).json();
+    const v = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail|original|name&pithumbsize=1920&titles=${encodeURIComponent(en)}&redirects=1&format=json&origin=*`)).json();
     const p = Object.values(v.query.pages)[0];
     const name = String(p.pageimage || ''), o = p.original || {};
     // רק צילום אמיתי: לא מפה, לא דגל, לא באנר צר
@@ -141,6 +151,7 @@ async function serverPhoto(en, country) {
 }
 // יעד: קודם הבאנר של היעד מוויקימסע (צילום של העיר עצמה, נטען מהר), ואם אין – צילום מ-Pixabay
 async function photoFor(en, country, hero) {
+  if (CURATED[en]) return hero || innerWidth > 900 ? CURATED[en].big : CURATED[en].src;
   if (hero) return (await cachedPhoto(en, country)) || (await serverPhoto(en, country));
   return (await wvPhoto(en)) || (await cachedPhoto(en, country)) || (await serverPhoto(en, country));
 }
@@ -188,7 +199,6 @@ const POPULAR = [
   { id: 2643743, he: 'לונדון', en: 'London', country: 'United Kingdom', heC: 'בריטניה', cc: 'gb' },
   { id: 3128760, he: 'ברצלונה', en: 'Barcelona', country: 'Spain', heC: 'ספרד', cc: 'es' },
 ];
-paint($('landArt'), 'waytip hero', '', '', 'beach', true);
 $('pop').innerHTML = POPULAR.map((p, i) => `<button class="pc" data-i="${i}"><div class="art" id="pa${i}"></div><div class="t"><b>${p.he}</b><span><span class="flag">${flag(p.cc)}</span>${p.heC}</span></div></button>`).join('');
 POPULAR.forEach((p, i) => paint($('pa' + i), p.en, p.country));
 document.querySelectorAll('.pc').forEach((b) => b.onclick = () => openById(POPULAR[+b.dataset.i].id));

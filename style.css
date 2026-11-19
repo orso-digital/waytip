@@ -504,3 +504,10 @@ html.a11y-contrast .topbar{background:#000!important}
 .pkbtn{display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;border-radius:12px;border:1px solid #12a3b4;background:#e6f4f5;color:#0b4f59;font:600 15px Heebo,sans-serif;cursor:pointer}
 .pkbtn.hidden{display:none}
 .pl .k .osm{font-style:normal;opacity:.75}
+
+.art .photo{position:absolute;inset:0;background-size:cover;background-position:center;background-repeat:no-repeat}
+.cover .art .photo.hero{background-image:url("https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg/1280px-Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg");opacity:1;transform:none}
+@media (min-width:901px){.cover .art .photo.hero{background-image:url("https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg/1920px-Koh_Mak_%28island%29%2C_Thailand%2C_Solitary_tree_in_lagoon.jpg")}}
+.credits{margin-top:8px;font-size:12px;color:var(--muted)}
+.credits summary{cursor:pointer}
+.credits ul{margin:6px 0 0;padding-inline-start:18px}
