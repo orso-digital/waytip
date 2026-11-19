@@ -415,17 +415,18 @@ function render() {
   document.querySelectorAll('[data-rep]').forEach((b) => b.onclick = () => report(b.dataset.rep));
 
   const DIET = ['kosher', 'vegan', 'vegetarian', 'glutenfree', 'halal'];
-  let W = web.filter(passW), relaxed = false;
+  const inLang = (w) => !w.wp || w.wp === (isEN ? 'en' : 'he');
+  let W = web.filter((w) => inLang(w) && passW(w)), relaxed = false;
   if ([...F.prefs].some((p) => DIET.includes(p))) W.sort((a, b) => (b.osm ? 1 : 0) - (a.osm ? 1 : 0));
-  if (!W.length && web.length && (F.prefs.size || F.cat)) { W = web.slice(); relaxed = true; }
+  if (!W.length && web.length && (F.prefs.size || F.cat)) { W = web.filter(inLang); relaxed = true; }
   $('webSub').textContent = !web.length ? '' : relaxed ? `לא מצאנו מקומות שמתאימים בדיוק לסינון, אז הנה כל ${W.length} המקומות המומלצים. בדקו מול המקום אם הוא מתאים לכם.` : `${W.length} מקומות${active ? ' שמתאימים לסינון' : ''}`;
-  $('web').innerHTML = loadingW ? loaderBlock('אוספים המלצות מהרשת…') : W.slice(0, 30).map((w) => {
-    const g = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(w.name + ' ' + dest.enName);
+  $('web').innerHTML = loadingW ? loaderBlock('אוספים המלצות מהרשת…') : W.slice(0, 60).map((w) => {
+    const g = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((w.enTitle || w.name) + ' ' + dest.enName);
     const diet = wTags(w).filter((t) => DIET.includes(t)).map((t) => ' · ' + T[t]).join('');
     const tx = wText(w);
-    return `<article class="pl"><div class="ph">${mini(w.cat)}</div><span class="k">${T[w.cat]}${diet}${w.osm ? ' · <i class="osm">OpenStreetMap</i>' : ''}</span><h4>${esc(w.name)}</h4>${tx ? `<p>${esc(tx.slice(0, 240))}${tx.length > 240 ? '…' : ''}</p>` : ''}
+    return `<article class="pl"><div class="ph${w.img ? ' img' : ''}"${w.img ? ` style="background-image:url('${esc(w.img)}')"` : ''}>${w.img ? '' : mini(w.cat)}</div><span class="k">${T[w.cat]}${diet}${w.osm ? ' · <i class="osm">OpenStreetMap</i>' : w.wp ? ' · <i class="osm">ויקיפדיה</i>' : ''}</span><h4>${esc(w.name)}</h4>${tx ? `<p>${esc(tx.slice(0, 240))}${tx.length > 240 ? '…' : ''}</p>` : ''}
       <button class="revbtn" data-q="${esc(w.name + ', ' + dest.enName)}"><span aria-hidden="true">★</span> דירוג וביקורות</button>
-      <div class="acts"><a href="${g}" target="_blank" rel="noopener">ביקורות בגוגל</a><a href="https://www.tripadvisor.com/Search?q=${encodeURIComponent(w.name + ' ' + dest.enName)}" target="_blank" rel="noopener">טריפאדווייזר</a>${/^https?:\/\//.test(w.url) ? `<a href="${esc(w.url)}" target="_blank" rel="noopener">אתר</a>` : ''}
+      <div class="acts"><a href="${g}" target="_blank" rel="noopener">ביקורות בגוגל</a><a href="https://www.tripadvisor.com/Search?q=${encodeURIComponent(w.name + ' ' + dest.enName)}" target="_blank" rel="noopener">טריפאדווייזר</a>${/^https?:\/\//.test(w.url) ? `<a href="${esc(w.url)}" target="_blank" rel="noopener">${w.wp ? 'ויקיפדיה' : 'אתר'}</a>` : ''}
       <button data-w="${esc(w.name)}" data-c="${w.cat}">כתבו המלצה</button></div></article>`;
   }).join('') || `<div class="empty" style="grid-column:1/-1"><b>${web.length ? 'לא נמצאו מקומות' : 'אין מידע מפורט ליעד הזה'}</b>${web.length ? 'נסו סינון אחר' : 'ביעדים גדולים המידע מחולק לשכונות, ראו בקישור למטה'}</div>`;
   document.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { $('fPlace').value = b.dataset.w; $('fCat').value = b.dataset.c; $('s-write').scrollIntoView({ behavior: 'smooth' }); });
@@ -484,16 +485,67 @@ async function loadWeb() {
   const me = dest;
   $('wvLink').href = 'https://en.wikivoyage.org/wiki/' + encodeURIComponent(dest.enName.replace(/ /g, '_'));
   loadingW = true; render();
-  const [wv, osm] = await Promise.all([
-    fetch(`https://en.wikivoyage.org/w/api.php?action=parse&page=${encodeURIComponent(dest.enName)}&prop=wikitext&redirects=1&format=json&formatversion=2&origin=*`)
-      .then((r) => r.json()).then((d) => (d.parse ? parseListings(d.parse.wikitext) : [])).catch(() => []),
-    loadOSM(dest),
-  ]);
+  const [wv, osm, wp] = await Promise.all([loadWV(dest.enName), loadOSM(dest), loadWiki(dest)]);
   if (me !== dest) return;
-  web = [...osm, ...wv];
+  // בלי כפילויות: מקום שמופיע גם בוויקימסע וגם בוויקיפדיה מוצג פעם אחת
+  const names = new Set(wv.map((w) => w.name.toLowerCase()));
+  web = [...osm, ...wv, ...wp.filter((w) => !names.has((w.enTitle || '').toLowerCase()))];
   await within(translateWeb(wv), 6000); // תיאורים בעברית (נשמרים, אז רק בפעם הראשונה זה לוקח רגע)
   if (me !== dest) return;
   loadingW = false; render();
+}
+
+// ---- ויקימסע: הדף של היעד, ואם יש בו מעט מקומות – גם דפי השכונות / הערים שלו ----
+const wvText = (t) => fetch(`https://en.wikivoyage.org/w/api.php?action=parse&page=${encodeURIComponent(t)}&prop=wikitext&redirects=1&format=json&formatversion=2&origin=*`)
+  .then((r) => r.json()).then((d) => (d.parse ? d.parse.wikitext : '')).catch(() => '');
+async function loadWV(title) {
+  const wt = await wvText(title);
+  let list = parseListings(wt);
+  if (list.length >= 25) return list;
+  // דפי משנה (שכונות): Paris/Le Marais וכו׳, ואם אין – הערים המרכזיות שמופיעות בדף
+  let subs = [];
+  try {
+    const d = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=query&list=prefixsearch&pssearch=${encodeURIComponent(title + '/')}&pslimit=8&format=json&origin=*`)).json();
+    subs = (d.query?.prefixsearch || []).map((x) => x.title);
+  } catch (e) {}
+  if (!subs.length) {
+    const sec = (wt.match(/==\s*(Cities|Districts|Regions)\s*==([\s\S]*?)\n==[^=]/i) || [])[2] || '';
+    subs = [...sec.matchAll(/\[\[([^\]|#]+)(?:\|[^\]]*)?\]\]/g)].map((m) => m[1].trim()).filter((t) => !/:/.test(t));
+  }
+  subs = [...new Set(subs)].slice(0, 5);
+  const more = await Promise.all(subs.map((t) => within(wvText(t), 5000).then((w) => parseListings(w || ''))));
+  const seen = new Set(list.map((w) => w.name));
+  for (const arr of more) for (const w of arr) if (!seen.has(w.name)) { seen.add(w.name); list.push(w); }
+  // שילוב: קצת מכל שכונה ולא הכול מהראשונה
+  return list;
+}
+
+// ---- ויקיפדיה: אתרים ואטרקציות ליד היעד, בעברית ובאנגלית (חינמי, CC BY-SA) ----
+async function wikiNear(lang, d) {
+  const u = `https://${lang}.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${d.lat}|${d.lon}&ggsradius=10000&ggslimit=40&ggsnamespace=0`
+    + `&prop=extracts|pageimages|description|langlinks&exintro=1&explaintext=1&exsentences=2&exlimit=max&piprop=thumbnail&pithumbsize=400&lllang=en&lllimit=max&format=json&formatversion=2&origin=*`;
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
+    const r = await (await fetch(u, { signal: ctl.signal })).json(); clearTimeout(t);
+    return (r.query?.pages || []).filter((p) => p.extract && p.extract.length > 60);
+  } catch (e) { return []; }
+}
+// לא מציגים ערים, רחובות, תחנות ומחוזות – רק מקומות שכדאי לבקר בהם
+const WP_SKIP = /(city|town|village|municipality|district|neighbou?rhood|commune|county|province|region|street|road|avenue|railway|metro|station|airport|bridge over|river in|electoral|company|school|university|hospital|embassy|hotel chain|עיר|כפר|רובע|שכונה|מחוז|רחוב|תחנת|נמל תעופה|בית ספר|אוניברסיט|בית חולים|שגרירות|חברה)/i;
+async function loadWiki(d) {
+  if (d.lat == null) return [];
+  const [he, en] = await Promise.all([wikiNear('he', d), wikiNear('en', d)]);
+  const mk = (p, lang) => {
+    const desc = p.description || '';
+    if (WP_SKIP.test(desc) || WP_SKIP.test(p.extract.slice(0, 90)) && !/(museum|palace|castle|temple|church|cathedral|park|garden|square|market|monument|מוזיאון|ארמון|מבצר|מקדש|כנסייה|קתדרלה|פארק|גן|כיכר|שוק|אנדרטה)/i.test(desc + p.extract.slice(0, 90))) return null;
+    const enTitle = lang === 'en' ? p.title : (p.langlinks || []).find((l) => l.lang === 'en')?.title || '';
+    const t = desc + ' ' + p.title + ' ' + p.extract.slice(0, 120);
+    const cat = /(synagogue|בית כנסת|חב"ד)/i.test(t) ? 'jewish' : /(museum|gallery|מוזיאון|גלריה)/i.test(t) ? 'museum' : /(beach|חוף)/i.test(t) ? 'beach'
+      : /(park|garden|nature reserve|mountain|lake|waterfall|פארק|גן |שמורת|הר |אגם|מפל)/i.test(t) ? 'nature' : /(market|שוק)/i.test(t) ? 'streetfood' : /(restaurant|מסעדה)/i.test(t) ? 'food' : 'see';
+    return { wp: lang, cat, name: p.title, enTitle, text: p.extract, he: lang === 'he' ? p.extract : '', img: p.thumbnail?.source || '',
+      url: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g, '_'))}` };
+  };
+  return [...he.map((p) => mk(p, 'he')), ...en.map((p) => mk(p, 'en'))].filter(Boolean);
 }
 
 // ---- מקומות כשרים / טבעוניים / ללא גלוטן / חלאל ובתי כנסת מ-OpenStreetMap (חינמי, ODbL) ----
@@ -564,7 +616,7 @@ window.addEventListener('langchange', async () => { // החלפת שפה בלי 
     if (x) { dest.name = isEN ? x.en : x.he; dest.country = isEN ? x.countryEn : x.country; }
     else { try { const g = await (await fetch(`https://geocoding-api.open-meteo.com/v1/get?id=${dest.id}&language=${isEN ? 'en' : 'he'}`)).json(); dest.name = g.name; dest.country = g.country || ''; } catch (e) {} }
     $('dName').textContent = dest.name; $('dCountry').textContent = dest.country; $('wName').textContent = dest.name;
-    if (!isEN) await within(translateWeb(web.filter((w) => !w.osm)), 6000);
+    if (!isEN) await within(translateWeb(web.filter((w) => !w.osm && !w.wp)), 6000);
     render();
   }
 });
