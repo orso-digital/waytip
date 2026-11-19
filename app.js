@@ -1,18 +1,18 @@
-import { isEN, startI18n, langButton } from './i18n.js?v=2611191833';
-import { searchExtra, extraById, searchPop } from './places.js?v=2611191833';
-import './a11y.js?v=2611191833';
+import { isEN, startI18n, langButton } from './i18n.js?v=2611200113';
+import { searchExtra, extraById, searchPop } from './places.js?v=2611200113';
+import './a11y.js?v=2611200113';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
   addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
-} from './firebase.js?v=2611191833';
-import { openAuth } from './account.js?v=2611191833';
-import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611191833';
-import { SERVER_URL, SITE_NAME } from './config.js?v=2611191833';
-import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611191833';
-import { parseVideo, videoButton } from './video.js?v=2611191833';
-import './reviews-web.js?v=2611191833';
-import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611191833';
-import { mini, TRIP_ICON } from './covers.js?v=2611191833';
+} from './firebase.js?v=2611200113';
+import { openAuth } from './account.js?v=2611200113';
+import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200113';
+import { SERVER_URL, SITE_NAME } from './config.js?v=2611200113';
+import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200113';
+import { parseVideo, videoButton } from './video.js?v=2611200113';
+import './reviews-web.js?v=2611200113';
+import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200113';
+import { mini, TRIP_ICON } from './covers.js?v=2611200113';
 import { startRegistration, startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
 
 const $ = (id) => document.getElementById(id);
@@ -37,7 +37,7 @@ onAuthStateChanged(auth, (u) => {
 function openMenu(btn) {
   let m = $('acctMenu');
   if (!m) { m = document.createElement('div'); m.id = 'acctMenu'; m.className = 'acctmenu hidden'; m.setAttribute('role', 'menu'); document.body.appendChild(m);
-    document.addEventListener('click', (e) => { if (!e.target.closest('#acctMenu') && !e.target.closest('[data-login]')) m.classList.add('hidden'); }); }
+    document.addEventListener('click', (e) => { if (!e.target.closest('#acctMenu') && !e.target.closest('[data-login]') && !e.target.closest('#bnAcct')) m.classList.add('hidden'); }); }
   const u = user;
   m.innerHTML = `<div class="am-h">${esc(u.isAnonymous ? 'מחוברים כאורח' : (u.email || u.displayName || ''))}</div>
     <button role="menuitem" data-a="saved">♥ היעדים השמורים שלי (${savedList().length})</button>
@@ -45,8 +45,8 @@ function openMenu(btn) {
     ${!u.isAnonymous && !u.emailVerified ? '<button role="menuitem" data-a="verify">שליחת מייל אימות שוב</button>' : ''}
     ${!u.isAnonymous && u.emailVerified && window.PublicKeyCredential ? '<button role="menuitem" data-a="passkey">הפעלת כניסה עם טביעת אצבע / Face ID</button>' : ''}
     <button role="menuitem" data-a="out">יציאה</button>`;
-  const r = btn.getBoundingClientRect();
-  m.style.top = (r.bottom + scrollY + 8) + 'px'; m.style.left = Math.max(12, r.left + scrollX) + 'px';
+  if (btn.closest('.bnav')) { m.classList.add('sheet-up'); m.style.top = ''; m.style.left = ''; }
+  else { m.classList.remove('sheet-up'); const r = btn.getBoundingClientRect(); m.style.top = (r.bottom + scrollY + 8) + 'px'; m.style.left = Math.max(12, r.left + scrollX) + 'px'; }
   m.classList.toggle('hidden');
   m.querySelectorAll('[data-a]').forEach((b) => b.onclick = async () => {
     m.classList.add('hidden');
@@ -806,7 +806,7 @@ addEventListener('scroll', () => document.querySelectorAll('.cue').forEach((c) =
 // שפה: כפתור החלפה בתפריט העליון, ותרגום הממשק לאנגלית כשנבחרה
 
 // ================= תפריט תחתון (בטלפון) =================
-(() => {
+try { (() => {
   const nb = document.querySelector('.bnav'); if (!nb) return;
   // בועה זכוכית שגולשת לכפתור הנבחר (כמו בתפריט של האייפון)
   const pill = document.createElement('span'); pill.className = 'bpill'; pill.setAttribute('aria-hidden', 'true'); nb.prepend(pill);
@@ -820,8 +820,8 @@ addEventListener('scroll', () => document.querySelectorAll('.cue').forEach((c) =
   $('bnHome').onclick = () => { $('home').click(); on('bnHome'); };
   $('bnSearch').onclick = () => { if (!$('destPage').classList.contains('hidden')) $('home').click(); setTimeout(() => { $('wz').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); on('bnSearch'); };
   $('bnSaved').onclick = () => { goSaved(); on('bnSaved'); };
-  $('bnAcct').onclick = (e) => { e.stopPropagation(); const b = document.querySelector('.topbar [data-login]'); if (b) b.click(); };
-})();
+  $('bnAcct').onclick = (e) => { e.stopPropagation(); if (user) openMenu($('bnAcct')); else login().catch(() => {}); };
+})(); } catch (e) { console.error(e); setTimeout(() => { throw e; }); }
 $('langSlot').replaceWith(langButton());
 startI18n();
 window.__wtReady = true; try { sessionStorage.removeItem('wtReload'); } catch (e) {}

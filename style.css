@@ -663,3 +663,5 @@ html[data-theme=app]{--brown:#a3836a;--brown2:#8c6d55}
 }
 @media(prefers-reduced-motion:reduce){.bpill,.bnav{transition:none!important}}
 html[data-theme=app] .toast{background:rgba(70,52,40,.92);color:#fff8ee;border-radius:999px;backdrop-filter:blur(10px)}
+@media(max-width:760px){.topbar [data-login]{display:none!important}}
+#acctMenu.sheet-up{position:fixed;top:auto!important;left:50%!important;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(360px,calc(100vw - 32px));z-index:130}
