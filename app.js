@@ -1,4 +1,5 @@
 import { isEN, startI18n, langButton } from './i18n.js';
+import { searchExtra, extraById } from './places.js';
 import './a11y.js';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
@@ -42,6 +43,7 @@ function openMenu(btn) {
     <button role="menuitem" data-a="saved">♥ היעדים השמורים שלי (${savedList().length})</button>
     ${u.isAnonymous ? '<button role="menuitem" data-a="upgrade">יצירת חשבון (כדי לכתוב המלצות)</button>' : ''}
     ${!u.isAnonymous && !u.emailVerified ? '<button role="menuitem" data-a="verify">שליחת מייל אימות שוב</button>' : ''}
+    ${!u.isAnonymous && u.emailVerified && window.PublicKeyCredential ? '<button role="menuitem" data-a="passkey">הפעלת כניסה עם טביעת אצבע / Face ID</button>' : ''}
     <button role="menuitem" data-a="out">יציאה</button>`;
   const r = btn.getBoundingClientRect();
   m.style.top = (r.bottom + scrollY + 8) + 'px'; m.style.left = Math.max(12, r.left + scrollX) + 'px';
@@ -51,6 +53,13 @@ function openMenu(btn) {
     if (b.dataset.a === 'saved') goSaved();
     if (b.dataset.a === 'upgrade') login({ allowGuest: false, signup: true, reason: 'צרו חשבון. היעדים ששמרתם יישארו.' }).catch(() => {});
     if (b.dataset.a === 'verify') { try { await resendVerification(); toast('שלחנו שוב מייל אימות'); } catch (e) { toast('נסו שוב בעוד כמה דקות'); } }
+    if (b.dataset.a === 'passkey') {
+      try {
+        const st = await api('/passkey/status');
+        if (!st.registered) await api('/passkey/register/verify', await startRegistration(await api('/passkey/register/options', {})));
+        toast('כניסה עם טביעת אצבע הופעלה ✓');
+      } catch (e) { if (e.name !== 'NotAllowedError') toast(e.message); }
+    }
     if (b.dataset.a === 'out') { await logout(); clearLocalSaved(); toast('יצאתם מהחשבון'); }
   });
 }
@@ -98,12 +107,15 @@ $('saveDest').onclick = async () => {
 // 1. Pexels דרך השרת (צילום גדול ומקצועי)  2. Wikimedia כגיבוי
 // מעירים את השרת ברקע כבר כשהאתר נפתח (בתוכנית החינמית הוא נרדם כשאין שימוש)
 fetch(SERVER_URL + '/').catch(() => {});
-const photoKey = (q, c) => (q + '-' + (c || '')).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120) || 'x';
+const photoKey = (q, c) => ('v2-' + q + '-' + (c || '')).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120) || 'x';
 async function wvPhoto(en) {
   try {
-    const v = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail&pithumbsize=2000&titles=${encodeURIComponent(en)}&redirects=1&format=json&origin=*`)).json();
+    const v = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail|original|name&pithumbsize=2000&titles=${encodeURIComponent(en)}&redirects=1&format=json&origin=*`)).json();
     const p = Object.values(v.query.pages)[0];
-    if (p.thumbnail && p.thumbnail.width >= 900) return p.thumbnail.source;
+    const name = String(p.pageimage || ''), o = p.original || {};
+    // רק צילום אמיתי: לא מפה, לא דגל, לא באנר צר
+    const photo = /\.jpe?g$/i.test(name) && !/map|karte|carte|locator|location|flag|region|banner|diagram|svg/i.test(name);
+    if (photo && p.thumbnail && p.thumbnail.width >= 1000 && o.width / o.height < 2.2) return p.thumbnail.source;
   } catch (e) {}
   return null;
 }
@@ -141,18 +153,28 @@ function prepareCover(en, country, hero) {
   if (!ready[k]) { const p = photoFor(en, country, hero).then(preload); p.then((s) => { p.done = s; }); ready[k] = p; }
   return ready[k];
 }
+function photoDiv(src, alt, instant) {
+  const d = document.createElement('div');
+  d.className = 'photo' + (instant ? ' in' : '');
+  d.style.backgroundImage = `url("${String(src).replace(/"/g, '%22')}")`;
+  if (alt) { d.setAttribute('role', 'img'); d.setAttribute('aria-label', alt); } else d.setAttribute('aria-hidden', 'true');
+  return d;
+}
 function paint(el, en, country, alt, fallback = 'see', hero = false) {
   const k = (hero ? 'h:' : '') + en + '|' + (country || '');
-  if (ready[k] && ready[k].done) { const src = ready[k].done; el.innerHTML = ''; const img = new Image(); img.alt = alt || ''; img.src = src; img.className = 'in'; el.appendChild(img); return; }
-  // בזמן הטעינה: רקע טורקיז חלק (בלי איור שמסתיר את הכותרת)
-  el.innerHTML = '<div class="artwait" aria-hidden="true"></div>';
   const mine = (el._p = (el._p || 0) + 1);
+  if (ready[k] && ready[k].done !== undefined) {
+    el.innerHTML = ready[k].done ? '' : '<div class="artwait done" aria-hidden="true"></div>';
+    if (ready[k].done) el.appendChild(photoDiv(ready[k].done, alt, true));
+    return;
+  }
+  el.innerHTML = '<div class="artwait" aria-hidden="true"></div>';
   prepareCover(en, country, hero).then((src) => {
     if (mine !== el._p) return;
     if (!src) { el.innerHTML = '<div class="artwait done" aria-hidden="true"></div>'; return; }
-    const img = new Image(); img.alt = alt || ''; img.decoding = 'async';
-    img.onload = () => { if (mine !== el._p) return; el.innerHTML = ''; el.appendChild(img); requestAnimationFrame(() => img.classList.add('in')); };
-    img.src = src;
+    const ph = photoDiv(src, alt, false); el.appendChild(ph);
+    requestAnimationFrame(() => requestAnimationFrame(() => ph.classList.add('in')));
+    setTimeout(() => { if (mine === el._p) el.querySelectorAll('.artwait').forEach((x) => x.remove()); }, 700);
   });
 }
 const flag = (cc) => cc ? `<img src="https://flagcdn.com/w80/${cc.toLowerCase()}.png" alt="דגל">` : '';
@@ -166,8 +188,7 @@ const POPULAR = [
   { id: 2643743, he: 'לונדון', en: 'London', country: 'United Kingdom', heC: 'בריטניה', cc: 'gb' },
   { id: 3128760, he: 'ברצלונה', en: 'Barcelona', country: 'Spain', heC: 'ספרד', cc: 'es' },
 ];
-if (!/d=\d+/.test(location.hash)) { showLoader(); within(prepareCover('waytip hero', '', true), 3500).then(() => { paint($('landArt'), 'waytip hero', '', '', 'beach', true); setTimeout(hideLoader, 120); }); }
-else paint($('landArt'), 'waytip hero', '', '', 'beach', true);
+paint($('landArt'), 'waytip hero', '', '', 'beach', true);
 $('pop').innerHTML = POPULAR.map((p, i) => `<button class="pc" data-i="${i}"><div class="art" id="pa${i}"></div><div class="t"><b>${p.he}</b><span><span class="flag">${flag(p.cc)}</span>${p.heC}</span></div></button>`).join('');
 POPULAR.forEach((p, i) => paint($('pa' + i), p.en, p.country));
 document.querySelectorAll('.pc').forEach((b) => b.onclick = () => openById(POPULAR[+b.dataset.i].id));
@@ -198,15 +219,27 @@ $('q').addEventListener('input', () => {
   clearTimeout(timer);
   const q = $('q').value.trim();
   if (q.length < 2) { $('sug').classList.add('hidden'); return; }
+  // איים ואזורים (קוסמוי, סנטוריני, באלי…) מופיעים מיד, בלי לחכות לרשת
+  const ex = searchExtra(q).map((p) => ({ id: p.id, name: isEN ? p.en : p.he, country: isEN ? p.countryEn : p.country, country_code: p.cc, admin1: '' }));
+  const draw = (list) => {
+    lastList = list;
+    $('sug').innerHTML = lastList.map((p, i) => `<li><button type="button" data-i="${i}"><span class="flag" style="box-shadow:0 0 0 1px #ddd">${flag(p.country_code)}</span>${esc(p.name)} <small>${esc([p.admin1, p.country].filter(Boolean).join(', '))}</small></button></li>`).join('') || '<li><small>לא נמצא יעד</small></li>';
+    $('sug').classList.remove('hidden');
+    $('sug').querySelectorAll('[data-i]').forEach((b) => b.onclick = () => pick(lastList[+b.dataset.i]));
+  };
+  if (ex.length) draw(ex);
   timer = setTimeout(async () => {
     try {
-      const d = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=${isEN ? 'en' : 'he'}&format=json`)).json();
-      lastList = d.results || [];
+      const d = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=${isEN ? 'en' : 'he'}&format=json`)).json();
+      if ($('q').value.trim() !== q) return;
+      const seen = new Set(ex.map((x) => x.name));
+      const found = (d.results || []).filter((p) => p.feature_code !== 'AIRP' && !seen.has(p.name));
+      lastList = [...ex, ...found].slice(0, 8);
       $('sug').innerHTML = lastList.map((p, i) => `<li><button type="button" data-i="${i}"><span class="flag" style="box-shadow:0 0 0 1px #ddd">${flag(p.country_code)}</span>${esc(p.name)} <small>${esc([p.admin1, p.country].filter(Boolean).join(', '))}</small></button></li>`).join('') || '<li><small>לא נמצא יעד</small></li>';
       $('sug').classList.remove('hidden');
       $('sug').querySelectorAll('[data-i]').forEach((b) => b.onclick = () => pick(lastList[+b.dataset.i]));
     } catch (e) {}
-  }, 300);
+  }, 150);
 });
 $('wzNext').onclick = () => {
   if (step === 1 && !W.id) { if (lastList[0]) pick(lastList[0]); else { $('q').focus(); toast('הקלידו יעד ובחרו מהרשימה'); return; } }
@@ -218,6 +251,13 @@ $('wzBack').onclick = () => { if (step > 1) { step--; wzShow(); } };
 
 async function openById(id, fromWz) {
   showLoader();
+  const x = extraById(String(id));
+  if (x) { // אי או אזור מהרשימה שלנו
+    dest = { key: x.id, id: x.id, name: isEN ? x.en : x.he, enName: x.en, country: isEN ? x.countryEn : x.country, countryEn: x.countryEn, cc: x.cc, lat: x.lat, lon: x.lon };
+    location.hash = 'd=' + x.id;
+    await within(prepareCover(dest.enName, dest.countryEn), 2500);
+    showDest(fromWz); setTimeout(hideLoader, 150); return;
+  }
   try {
     const [he, en] = await Promise.all([
       fetch(`https://geocoding-api.open-meteo.com/v1/get?id=${id}&language=${isEN ? 'en' : 'he'}`).then((r) => r.json()),
@@ -225,13 +265,13 @@ async function openById(id, fromWz) {
     ]);
     dest = { key: 'g' + id, id, name: he.name, enName: en.name, country: he.country || '', countryEn: en.country || '', cc: he.country_code || '', lat: he.latitude, lon: he.longitude };
     location.hash = 'd=' + id;
-    await within(prepareCover(dest.enName, dest.countryEn), 4500); // הדף נפתח עם התמונה מוכנה
+    await within(prepareCover(dest.enName, dest.countryEn), 2500); // הדף נפתח עם התמונה מוכנה
     showDest(fromWz);
   } catch (e) { toast('לא הצלחתי לטעון את היעד'); }
   finally { setTimeout(hideLoader, 150); }
 }
-(function fromHash() { const m = location.hash.match(/d=(\d+)/); if (m) openById(m[1]); })();
-$('home').onclick = (e) => { e.preventDefault(); history.replaceState(null, '', location.pathname); $('destPage').classList.add('hidden'); $('landing').classList.remove('hidden'); scrollTo(0, 0); };
+(function fromHash() { const m = location.hash.match(/d=(\d+|a-[a-z0-9-]+)/); if (m) openById(m[1]); })();
+$('home').onclick = (e) => { e.preventDefault(); history.replaceState(null, '', location.pathname); $('saveDest').classList.add('hidden'); $('destPage').classList.add('hidden'); $('landing').classList.remove('hidden'); scrollTo(0, 0); };
 
 // ================= תאריכים =================
 const iso = (d) => d.toISOString().slice(0, 10);
@@ -240,6 +280,7 @@ function sync(fromBar) {
   let t = fromBar ? $('to2').value : $('to').value;
   if (f && (!t || t < f)) t = f;
   $('from').value = $('from2').value = f; $('to').value = $('to2').value = t;
+  if (f) { $('to').min = $('to2').min = f; }
 }
 ['from', 'to'].forEach((id) => $(id).addEventListener('change', () => sync(false)));
 ['from2', 'to2'].forEach((id) => $(id).addEventListener('change', () => { sync(true); loadWeather(); render(); }));
@@ -275,6 +316,7 @@ function showDest(fromWz) {
   $('dName').textContent = dest.name; $('wName').textContent = dest.name;
   $('dCountry').textContent = dest.country; $('dFlag').innerHTML = flag(dest.cc);
   paint($('destArt'), dest.enName, dest.countryEn, 'צילום של ' + dest.name);
+  $('saveDest').classList.remove('hidden');
   drawSaveBtn();
   scrollTo(0, 0);
   loadWeather(); loadReviews(); loadWeb(); render();
@@ -331,7 +373,9 @@ function drawFilters() {
 $('clearF').onclick = () => { F = { trip: '', cat: '', prefs: new Set() }; loadWeather(); render(); };
 const passR = (r) => (!F.trip || r.trip === F.trip) && (!F.cat || r.cat === F.cat) && [...F.prefs].every((p) => (r.tags || []).includes(p));
 const placeTags = (t) => Object.keys(KW).filter((k) => KW[k].test(t));
-const passW = (w) => (!F.cat || w.cat === F.cat) && [...F.prefs].every((p) => placeTags(w.text).includes(p));
+const wTags = (w) => [...new Set([...(w.tags || []), ...placeTags(w.text || '')])];
+const passW = (w) => (!F.cat || w.cat === F.cat) && [...F.prefs].every((p) => wTags(w).includes(p));
+const wText = (w) => w.osm ? w.text : ((!isEN && w.he) ? w.he : (w.text || ''));
 
 function rv(r, inS) {
   const tags = [r.trip && `<span class="tag j">${T[r.trip]}</span>`, r.cat && `<span class="tag">${T[r.cat]}</span>`, ...(r.tags || []).map((t) => `<span class="tag">${T[t] || ''}</span>`)].filter(Boolean).join('');
@@ -360,13 +404,16 @@ function render() {
   $('revOther').innerHTML = oth.map((r) => rv(r, false)).join('');
   document.querySelectorAll('[data-rep]').forEach((b) => b.onclick = () => report(b.dataset.rep));
 
+  const DIET = ['kosher', 'vegan', 'vegetarian', 'glutenfree', 'halal'];
   let W = web.filter(passW), relaxed = false;
+  if ([...F.prefs].some((p) => DIET.includes(p))) W.sort((a, b) => (b.osm ? 1 : 0) - (a.osm ? 1 : 0));
   if (!W.length && web.length && (F.prefs.size || F.cat)) { W = web.slice(); relaxed = true; }
   $('webSub').textContent = !web.length ? '' : relaxed ? `לא מצאנו מקומות שמתאימים בדיוק לסינון, אז הנה כל ${W.length} המקומות המומלצים. בדקו מול המקום אם הוא מתאים לכם.` : `${W.length} מקומות${active ? ' שמתאימים לסינון' : ''}`;
   $('web').innerHTML = loadingW ? loaderBlock('אוספים המלצות מהרשת…') : W.slice(0, 30).map((w) => {
     const g = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(w.name + ' ' + dest.enName);
-    const diet = placeTags(w.text).filter((t) => ['kosher', 'vegan', 'vegetarian', 'glutenfree', 'halal'].includes(t)).map((t) => ' · ' + T[t]).join('');
-    return `<article class="pl"><div class="ph">${mini(w.cat)}</div><span class="k">${T[w.cat]}${diet}</span><h4>${esc(w.name)}</h4>${w.text ? `<p>${esc(w.text.slice(0, 240))}${w.text.length > 240 ? '…' : ''}</p>` : ''}
+    const diet = wTags(w).filter((t) => DIET.includes(t)).map((t) => ' · ' + T[t]).join('');
+    const tx = wText(w);
+    return `<article class="pl"><div class="ph">${mini(w.cat)}</div><span class="k">${T[w.cat]}${diet}${w.osm ? ' · <i class="osm">OpenStreetMap</i>' : ''}</span><h4>${esc(w.name)}</h4>${tx ? `<p>${esc(tx.slice(0, 240))}${tx.length > 240 ? '…' : ''}</p>` : ''}
       <button class="revbtn" data-q="${esc(w.name + ', ' + dest.enName)}"><span aria-hidden="true">★</span> דירוג וביקורות</button>
       <div class="acts"><a href="${g}" target="_blank" rel="noopener">ביקורות בגוגל</a><a href="https://www.tripadvisor.com/Search?q=${encodeURIComponent(w.name + ' ' + dest.enName)}" target="_blank" rel="noopener">טריפאדווייזר</a>${/^https?:\/\//.test(w.url) ? `<a href="${esc(w.url)}" target="_blank" rel="noopener">אתר</a>` : ''}
       <button data-w="${esc(w.name)}" data-c="${w.cat}">כתבו המלצה</button></div></article>`;
@@ -424,14 +471,93 @@ export function parseListings(wt) {
 }
 async function loadWeb() {
   web = [];
+  const me = dest;
   $('wvLink').href = 'https://en.wikivoyage.org/wiki/' + encodeURIComponent(dest.enName.replace(/ /g, '_'));
   loadingW = true; render();
-  try {
-    const d = await (await fetch(`https://en.wikivoyage.org/w/api.php?action=parse&page=${encodeURIComponent(dest.enName)}&prop=wikitext&redirects=1&format=json&formatversion=2&origin=*`)).json();
-    if (d.parse) web = parseListings(d.parse.wikitext);
-  } catch (e) {}
+  const [wv, osm] = await Promise.all([
+    fetch(`https://en.wikivoyage.org/w/api.php?action=parse&page=${encodeURIComponent(dest.enName)}&prop=wikitext&redirects=1&format=json&formatversion=2&origin=*`)
+      .then((r) => r.json()).then((d) => (d.parse ? parseListings(d.parse.wikitext) : [])).catch(() => []),
+    loadOSM(dest),
+  ]);
+  if (me !== dest) return;
+  web = [...osm, ...wv];
+  await within(translateWeb(wv), 6000); // תיאורים בעברית (נשמרים, אז רק בפעם הראשונה זה לוקח רגע)
+  if (me !== dest) return;
   loadingW = false; render();
 }
+
+// ---- מקומות כשרים / טבעוניים / ללא גלוטן / חלאל ובתי כנסת מ-OpenStreetMap (חינמי, ODbL) ----
+const OSM_SETS = [
+  ['kosher', '["diet:kosher"~"^(yes|only)$"]'], ['vegan', '["diet:vegan"~"^(yes|only)$"]'], ['glutenfree', '["diet:gluten_free"~"^(yes|only)$"]'],
+  ['halal', '["diet:halal"~"^(yes|only)$"]'], ['vegetarian', '["diet:vegetarian"="only"]'], ['jewish', '["amenity"="place_of_worship"]["religion"="jewish"]'],
+];
+async function loadOSM(d) {
+  if (d.lat == null) return [];
+  const R = 20000, at = `(around:${R},${d.lat},${d.lon})`;
+  const q = '[out:json][timeout:20];' + OSM_SETS.map(([k, f], i) => `nwr${f}${at}->.s${i};.s${i} out center tags 40;`).join('');
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 9000);
+    const r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctl.signal });
+    clearTimeout(t);
+    const els = (await r.json()).elements || [];
+    const seen = new Set();
+    return els.filter((e) => e.tags && e.tags.name && !seen.has(e.id) && seen.add(e.id)).map(osmItem);
+  } catch (e) { return []; }
+}
+function osmItem(e) {
+  const g = e.tags;
+  const tags = [];
+  if (/^(yes|only)$/.test(g['diet:kosher'] || '')) tags.push('kosher');
+  if (/^(yes|only)$/.test(g['diet:vegan'] || '')) tags.push('vegan');
+  if (/^(yes|only)$/.test(g['diet:vegetarian'] || '')) tags.push('vegetarian');
+  if (/^(yes|only)$/.test(g['diet:gluten_free'] || '')) tags.push('glutenfree');
+  if (/^(yes|only)$/.test(g['diet:halal'] || '')) tags.push('halal');
+  if (g.wheelchair === 'yes') tags.push('access');
+  const am = g.amenity || '', sh = g.shop || '';
+  const cat = am === 'place_of_worship' ? 'jewish' : /cafe|ice_cream/.test(am) ? 'cafe' : sh ? 'shop' : 'food';
+  const it = { osm: true, g, cat, tags, url: g.website || g['contact:website'] || '' };
+  Object.defineProperty(it, 'name', { get: () => (isEN ? g['name:en'] : g['name:he']) || g.name });
+  Object.defineProperty(it, 'text', { get: () => osmText(g, tags) });
+  return it;
+}
+function osmText(g, tags) {
+  const am = g.amenity || '', sh = g.shop || '', E = isEN;
+  const chabad = /chabad|habad|lubavitch|חב"ד/i.test((g.name || '') + (g.operator || ''));
+  const K = E ? { restaurant: 'Restaurant', fast_food: 'Fast food', cafe: 'Café', ice_cream: 'Ice cream', bar: 'Bar', place_of_worship: chabad ? 'Chabad house' : 'Synagogue', supermarket: 'Supermarket', bakery: 'Bakery', butcher: 'Butcher', shop: 'Shop', other: 'Place' }
+    : { restaurant: 'מסעדה', fast_food: 'מזון מהיר', cafe: 'בית קפה', ice_cream: 'גלידריה', bar: 'בר', place_of_worship: chabad ? 'בית חב"ד' : 'בית כנסת', supermarket: 'סופרמרקט', bakery: 'מאפייה', butcher: 'קצביה', shop: 'חנות', other: 'מקום' };
+  const kind = K[am] || K[sh] || (sh ? K.shop : K.other);
+  const addr = [g['addr:street'] && (g['addr:street'] + (g['addr:housenumber'] ? ' ' + g['addr:housenumber'] : '')), g['addr:city']].filter(Boolean).join(', ');
+  const kos = tags.includes('kosher') ? (E ? ' · kosher' + (/only/.test(g['diet:kosher']) ? ' (fully)' : '') : ' כשר' + (/only/.test(g['diet:kosher']) ? ' (מלא)' : '')) : '';
+  return [kind + kos, g.cuisine && ((E ? 'Cuisine: ' : 'מטבח: ') + g.cuisine.replace(/;/g, ', ')), addr && ((E ? 'Address: ' : 'כתובת: ') + addr),
+    g.opening_hours && ((E ? 'Hours: ' : 'שעות: ') + g.opening_hours), g['kosher:certification'] && ((E ? 'Supervision: ' : 'השגחה: ') + g['kosher:certification'])].filter(Boolean).join(' · ');
+}
+
+// ---- תרגום תיאורי ויקימסע לעברית: קודם מהזיכרון במסד הנתונים, ומה שחסר דרך השרת ----
+async function sha1(t) { const b = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(t)); return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join(''); }
+async function translateWeb(list) {
+  if (isEN || !list.length) return;
+  const items = list.slice(0, 30).filter((w) => w.text && !w.he);
+  await Promise.all(items.map(async (w) => {
+    try { const d = await getDoc(doc(db, 'trCache', 'he-' + await sha1(w.text.slice(0, 480)))); if (d.exists()) w.he = d.data().t; } catch (e) {}
+  }));
+  const miss = items.filter((w) => !w.he);
+  if (!miss.length) return;
+  try {
+    const r = await fetch(SERVER_URL + '/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: 'he', texts: miss.map((w) => w.text.slice(0, 480)) }) });
+    const { out = [] } = await r.json();
+    miss.forEach((w, i) => { if (out[i]) w.he = out[i]; });
+  } catch (e) {}
+}
+window.addEventListener('langchange', async () => { // החלפת שפה בלי לטעון מחדש
+  if (dest) {
+    const x = extraById(String(dest.id));
+    if (x) { dest.name = isEN ? x.en : x.he; dest.country = isEN ? x.countryEn : x.country; }
+    else { try { const g = await (await fetch(`https://geocoding-api.open-meteo.com/v1/get?id=${dest.id}&language=${isEN ? 'en' : 'he'}`)).json(); dest.name = g.name; dest.country = g.country || ''; } catch (e) {} }
+    $('dName').textContent = dest.name; $('dCountry').textContent = dest.country; $('wName').textContent = dest.name;
+    if (!isEN) await within(translateWeb(web.filter((w) => !w.osm)), 6000);
+    render();
+  }
+});
 
 // ================= טופס המלצה =================
 $('fCat').innerHTML = CATS.map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
@@ -497,7 +623,13 @@ $('send').onclick = async () => {
 };
 
 // תאריכי ברירת מחדל: שבוע, בעוד חודש
-(() => { const a = new Date(); a.setMonth(a.getMonth() + 1); const b = new Date(a); b.setDate(b.getDate() + 7); $('from').value = iso(a); $('to').value = iso(b); sync(false); })();
+// תאריכים: מתחילים מהיום, ואי אפשר לבחור תאריך שכבר עבר
+const localISO = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+(() => {
+  const a = new Date(), b = new Date(); b.setDate(b.getDate() + 7);
+  ['from', 'from2', 'to', 'to2'].forEach((id) => { $(id).min = localISO(a); });
+  $('from').value = localISO(a); $('to').value = localISO(b); sync(false);
+})();
 wzShow();
 
 // שורת "איזה טיול אתם מתכננים?"
@@ -509,5 +641,5 @@ document.querySelectorAll('.cue').forEach((c) => c.onclick = () => document.getE
 addEventListener('scroll', () => document.querySelectorAll('.cue').forEach((c) => c.classList.toggle('gone', scrollY > 60)), { passive: true });
 
 // שפה: כפתור החלפה בתפריט העליון, ותרגום הממשק לאנגלית כשנבחרה
-document.querySelectorAll('.nav [data-login]').forEach((b) => b.before(langButton()));
+$('langSlot').replaceWith(langButton());
 startI18n();

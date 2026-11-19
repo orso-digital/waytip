@@ -1,12 +1,7 @@
 // תפריט נגישות (לפי ת"י 5568 / WCAG 2.0 AA): התאמות תצוגה שהגולש בוחר, נשמרות בדפדפן
 const KEY = 'waytip.a11y';
-const EN = (() => { try { return localStorage.getItem('waytip.lang') === 'en'; } catch (e) { return false; } })();
-const L = EN ? {
-  open: 'Accessibility menu', title: 'Accessibility', close: 'Close',
-  bigger: 'Larger text', smaller: 'Smaller text', contrast: 'High contrast', gray: 'Grayscale', links: 'Highlight links',
-  font: 'Readable font', spacing: 'Line spacing', motion: 'Stop animations', cursor: 'Large cursor', focus: 'Strong focus outline',
-  reset: 'Reset', statement: 'Accessibility statement', size: 'Text size',
-} : {
+const EN = false; // התוויות בעברית; i18n.js מתרגם אותן כשבוחרים אנגלית
+const L = {
   open: 'תפריט נגישות', title: 'נגישות', close: 'סגירה',
   bigger: 'הגדלת טקסט', smaller: 'הקטנת טקסט', contrast: 'ניגודיות גבוהה', gray: 'גווני אפור', links: 'הדגשת קישורים',
   font: 'גופן קריא', spacing: 'ריווח שורות', motion: 'עצירת אנימציות', cursor: 'סמן גדול', focus: 'מסגרת מיקוד בולטת',

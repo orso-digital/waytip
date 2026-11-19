@@ -15,11 +15,20 @@
 </head>
 <body>
 <a class="skip" href="#main">דילוג לתוכן הראשי</a>
+<header class="topbar">
+  <div class="tb-in">
+    <a class="brand" href="./" id="home" dir="ltr" aria-label="WayTip – לדף הבית"><img class="bmark" src="assets/mark-color.png" alt="" width="38" height="38"><span>Way<b>Tip</b></span></a>
+    <div class="tb-act">
+      <button class="savebtn hidden" id="saveDest" type="button" aria-pressed="false"><span aria-hidden="true">♡</span> שמירה</button>
+      <span id="langSlot"></span>
+      <button class="navlink" type="button" data-login>התחברות</button>
+    </div>
+  </div>
+</header>
 
 <div id="landing">
   <header class="cover landing">
     <div class="art" id="landArt"></div>
-    <nav class="nav"><a class="brand" href="./" id="brand1" dir="ltr" aria-label="WayTip – לדף הבית"><img class="bmark" src="assets/mark-white.png" alt="" width="34" height="34"><span>Way<b>Tip</b></span></a><button class="navlink" data-login>התחברות</button></nav>
     <div class="in wrap">
       <div class="place-line">המלצות מאומתות ממטיילים, לפי עונה ואופי הטיול</div>
       <h1>לאן טסים?</h1>
@@ -68,9 +77,8 @@
 <div id="destPage" class="hidden">
   <header class="cover">
     <div class="art" id="destArt"></div>
-    <nav class="nav"><a class="brand" href="./" id="home" dir="ltr" aria-label="WayTip – לדף הבית"><img class="bmark" src="assets/mark-white.png" alt="" width="34" height="34"><span>Way<b>Tip</b></span></a><button class="navlink" data-login>התחברות</button></nav>
     <div class="in wrap">
-      <div class="place-line"><span class="flag" id="dFlag"></span><span id="dCountry"></span><button class="savebtn" id="saveDest" aria-pressed="false"><span aria-hidden="true">♡</span> שמירה</button></div>
+      <div class="place-line"><span class="flag" id="dFlag"></span><span id="dCountry"></span></div>
       <h1 id="dName"></h1>
       <div class="sub" id="dSub"></div>
       <div class="strip">
@@ -107,7 +115,7 @@
     <section class="sec" id="s-web">
       <div class="sh"><h2>מקומות מומלצים מהרשת</h2><p id="webSub"></p></div>
       <div class="places" id="web"></div>
-      <div class="srcnote">מקור: <a id="wvLink" target="_blank" rel="noopener">Wikivoyage</a>, בכפוף לרישיון <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.he" target="_blank" rel="noopener">CC BY-SA 4.0</a>. הסינון לפי העדפות מבוסס על מילות מפתח בתיאור המקום. ייתכן שהמידע לא עדכני, ויש לבדוק שעות, מחירים וכשרות מול המקום עצמו.</div>
+      <div class="srcnote"><span>מקור:</span> <a id="wvLink" target="_blank" rel="noopener">Wikivoyage</a><span>, בכפוף לרישיון</span> <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.he" target="_blank" rel="noopener">CC BY-SA 4.0</a>. <span>מקומות כשרים, טבעוניים, ללא גלוטן, חלאל ובתי כנסת: ©</span> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">תורמי OpenStreetMap</a> <span>(ODbL). תיאורים בעברית תורגמו אוטומטית.</span> <span>הסינון לפי העדפות מבוסס על מילות מפתח בתיאור המקום. ייתכן שהמידע לא עדכני, ויש לבדוק שעות, מחירים וכשרות מול המקום עצמו.</span></div>
     </section>
 
     <section class="write" id="s-write">

@@ -2,7 +2,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut,
   createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail,
-  signInAnonymously, linkWithPopup, linkWithCredential, EmailAuthProvider, updateProfile, deleteUser, signInWithCredential,
+  signInAnonymously, linkWithPopup, linkWithCredential, EmailAuthProvider, updateProfile, deleteUser, signInWithCredential, signInWithCustomToken,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getFirestore, collection, query, where, getDocs, getDoc, doc, addDoc, updateDoc, setDoc,
@@ -49,6 +49,7 @@ export const loginGuest = () => signInAnonymously(auth);
 export const login = loginGoogle;
 export const logout = () => signOut(auth);
 export const removeUser = () => deleteUser(auth.currentUser);
+export const loginToken = (t) => signInWithCustomToken(auth, t);
 export {
   onAuthStateChanged, collection, query, where, getDocs, getDoc, doc, addDoc, updateDoc, setDoc,
   serverTimestamp, limit, writeBatch, deleteDoc,

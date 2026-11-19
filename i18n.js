@@ -1,9 +1,17 @@
 // שפת האתר: עברית (ברירת מחדל) או אנגלית. באנגלית מתרגמים את כל טקסט הממשק, כולל מה שנוצר אחר כך.
 // תוכן שמטיילים כתבו נשאר בשפה שבה נכתב.
 const KEY = 'waytip.lang';
-export const LANG = (() => { try { return localStorage.getItem(KEY) === 'en' ? 'en' : 'he'; } catch (e) { return 'he'; } })();
-export const isEN = LANG === 'en';
-export function setLang(l) { try { localStorage.setItem(KEY, l); } catch (e) {} location.reload(); }
+export let LANG = (() => { try { return localStorage.getItem(KEY) === 'en' ? 'en' : 'he'; } catch (e) { return 'he'; } })();
+export let isEN = LANG === 'en';
+let live = false; // באתר הראשי מחליפים שפה במקום, בלי לטעון מחדש
+export function setLang(l) {
+  try { localStorage.setItem(KEY, l); } catch (e) {}
+  if (!live) { location.reload(); return; }
+  LANG = l; isEN = l === 'en';
+  apply();
+  document.querySelectorAll('.langbtn').forEach(paintBtn);
+  window.dispatchEvent(new Event('langchange'));
+}
 
 const MON_HE = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -38,7 +46,7 @@ const D = {
   'ביעדים גדולים המידע מחולק לשכונות, ראו בקישור למטה': 'For big destinations the info is split by district, see the link below',
   'דירוג וביקורות': 'Rating & reviews', 'ביקורות בגוגל': 'Google reviews', 'טריפאדווייזר': 'Tripadvisor', 'כתבו המלצה': 'Write a tip', 'אתר': 'Website',
   'הדירוג והביקורות מוצגים מתוך גוגל מפות. לחצו על "ביקורות" בכרטיס כדי לקרוא אותן.': 'Rating and reviews are shown from Google Maps. Tap "Reviews" in the card to read them.',
-  'מקור:': 'Source:', ', בכפוף לרישיון': ', under the license',
+  'מקור:': 'Source:', 'הסינון לפי העדפות מבוסס על מילות מפתח בתיאור המקום. ייתכן שהמידע לא עדכני, ויש לבדוק שעות, מחירים וכשרות מול המקום עצמו.': 'Preference filtering is based on keywords in the description. Info may be out of date; check hours, prices and kashrut with the place itself.', 'מקומות כשרים, טבעוניים, ללא גלוטן, חלאל ובתי כנסת: ©': 'Kosher, vegan, gluten-free, halal places and synagogues: ©', 'תורמי OpenStreetMap': 'OpenStreetMap contributors', '(ODbL). תיאורים בעברית תורגמו אוטומטית.': '(ODbL). Hebrew descriptions are machine-translated.', ', בכפוף לרישיון': ', under the license',
   '. הסינון לפי העדפות מבוסס על מילות מפתח בתיאור המקום. ייתכן שהמידע לא עדכני, ויש לבדוק שעות, מחירים וכשרות מול המקום עצמו.': '. Preference filtering is based on keywords in the description. Info may be out of date; check hours, prices and kashrut with the place itself.',
   'מטייל מאומת': 'Verified traveler', 'בעונה שלכם': 'In your season', 'דיווח': 'Report', 'בעונה שלכם · ': 'In your season · ', 'טיפ': 'Tip',
   'ביקרתם ב': 'Visited ', 'ההמלצה שלכם תעזור למטיילים שטסים באותה עונה ובאותו אופי טיול. כל המלצה נבדקת לפני פרסום.': 'Your tip will help travelers going in the same season and style. Every tip is reviewed before publishing.',
@@ -106,7 +114,12 @@ const D = {
   'שגיאה בשרת': 'Server error', 'לא הצלחתי לטעון את היעד': 'Couldn\'t load the destination',
   'מה הבעיה בהמלצה? (למשל: פרסומת, מידע לא נכון, תוכן פוגעני, פגיעה בפרטיות, לשון הרע או הפרת זכויות יוצרים)': 'What\'s wrong with this tip? (e.g. advertising, wrong info, offensive content, privacy, defamation or copyright)',
   'תודה, הדיווח נשלח לבדיקה': 'Thanks, the report was sent for review', 'לא הצלחתי לשלוח את הדיווח': 'Couldn\'t send the report',
-  'דגל': 'Flag', 'סרטון מצורף': 'Attached video', 'דירוג וביקורות בגוגל מפות': 'Rating and reviews on Google Maps',
+  'דגל': 'Flag', 'תפריט נגישות': 'Accessibility menu', 'נגישות': 'Accessibility', 'הגדלת טקסט': 'Larger text', 'הקטנת טקסט': 'Smaller text',
+  'ניגודיות גבוהה': 'High contrast', 'גווני אפור': 'Grayscale', 'הדגשת קישורים': 'Highlight links', 'גופן קריא': 'Readable font', 'ריווח שורות': 'Line spacing',
+  'עצירת אנימציות': 'Stop animations', 'סמן גדול': 'Large cursor', 'מסגרת מיקוד בולטת': 'Strong focus outline', 'איפוס הגדרות': 'Reset', 'גודל טקסט': 'Text size',
+  'א-': 'A-', 'א+': 'A+', 'מעבר לעברית': 'Switch to Hebrew', 'כניסה עם טביעת אצבע / Face ID': 'Sign in with fingerprint / Face ID',
+  'הפעלת כניסה עם טביעת אצבע / Face ID': 'Enable fingerprint / Face ID sign-in', 'כניסה עם טביעת אצבע הופעלה ✓': 'Fingerprint sign-in enabled ✓',
+  'התחברתם עם טביעת אצבע': 'Signed in with fingerprint', 'איים ואזורים': 'Islands & regions', 'בית כנסת': 'Synagogue', 'בית חב"ד': 'Chabad house', 'סרטון מצורף': 'Attached video', 'דירוג וביקורות בגוגל מפות': 'Rating and reviews on Google Maps',
 };
 const P = [
   [/^(\d+) מהעונה שלכם$/, '$1 from your season'],
@@ -141,31 +154,54 @@ export function tr(s) {
   return lead + out + tail;
 }
 const ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
+// מתרגמים ושומרים את המקור, כדי שאפשר יהיה לחזור לעברית בלי טעינה
+const ORIG = new WeakMap(), ORIGA = new WeakMap();
+let busy = false;
 function walk(root) {
-  if (root.nodeType === 3) { const t = tr(root.nodeValue); if (t !== root.nodeValue) root.nodeValue = t; return; }
+  if (root.nodeType === 3) {
+    const cur = root.nodeValue;
+    if (isEN) { const t = tr(cur); if (t !== cur) { ORIG.set(root, cur); root.nodeValue = t; } }
+    else if (ORIG.has(root)) { root.nodeValue = ORIG.get(root); ORIG.delete(root); }
+    return;
+  }
   if (root.nodeType !== 1 || root.closest?.('[data-noi18n],script,style,textarea,.rv p')) return;
-  ATTRS.forEach((a) => { const v = root.getAttribute?.(a); if (v) { const t = tr(v); if (t !== v) root.setAttribute(a, t); } });
+  ATTRS.forEach((a) => {
+    const v = root.getAttribute?.(a); if (v == null) return;
+    const o = ORIGA.get(root) || {};
+    if (isEN) { const t = tr(v); if (t !== v) { o[a] = v; ORIGA.set(root, o); root.setAttribute(a, t); } }
+    else if (o[a] != null) { root.setAttribute(a, o[a]); delete o[a]; }
+  });
   root.childNodes.forEach(walk);
 }
-export function startI18n() {
+let title0 = '';
+function apply() {
   const h = document.documentElement;
-  if (!isEN) return;
-  h.lang = 'en'; h.dir = 'ltr'; h.classList.add('lang-en');
-  document.title = tr(document.title);
-  walk(document.body);
-  new MutationObserver((ms) => ms.forEach((m) => {
-    if (m.type === 'characterData') walk(m.target);
-    m.addedNodes.forEach(walk);
-    if (m.type === 'attributes') walk(m.target);
-  })).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+  h.lang = isEN ? 'en' : 'he'; h.dir = isEN ? 'ltr' : 'rtl'; h.classList.toggle('lang-en', isEN);
+  if (!title0) title0 = document.title;
+  document.title = isEN ? tr(title0) : title0;
+  busy = true; walk(document.body); busy = false;
+}
+export function startI18n() {
+  live = true;
+  apply();
+  new MutationObserver((ms) => {
+    if (busy || !isEN) return;
+    busy = true;
+    ms.forEach((m) => { if (m.type === 'characterData') walk(m.target); m.addedNodes.forEach(walk); if (m.type === 'attributes') walk(m.target); });
+    busy = false;
+  }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
   const c = window.confirm.bind(window), p = window.prompt.bind(window), a = window.alert.bind(window);
   window.confirm = (m) => c(tr(m)); window.prompt = (m, d) => p(tr(m), d); window.alert = (m) => a(tr(m));
 }
-export function langButton() {
-  const b = document.createElement('button');
-  b.type = 'button'; b.className = 'navlink langbtn'; b.lang = isEN ? 'he' : 'en';
+function paintBtn(b) {
+  b.lang = isEN ? 'he' : 'en';
   b.textContent = isEN ? 'עברית' : 'English';
   b.setAttribute('aria-label', isEN ? 'מעבר לעברית' : 'Switch to English');
+}
+export function langButton() {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'navlink langbtn';
+  paintBtn(b);
   b.setAttribute('data-noi18n', '');
   b.onclick = () => setLang(isEN ? 'he' : 'en');
   return b;
