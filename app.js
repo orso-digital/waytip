@@ -1,18 +1,18 @@
-import { isEN, startI18n, langButton } from './i18n.js?v=2611200137';
-import { searchExtra, extraById, searchPop } from './places.js?v=2611200137';
-import './a11y.js?v=2611200137';
+import { isEN, startI18n, langButton } from './i18n.js?v=2611200138';
+import { searchExtra, extraById, searchPop } from './places.js?v=2611200138';
+import './a11y.js?v=2611200138';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
   addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
-} from './firebase.js?v=2611200137';
-import { openAuth } from './account.js?v=2611200137';
-import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200137';
-import { SERVER_URL, SITE_NAME } from './config.js?v=2611200137';
-import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200137';
-import { parseVideo, videoButton } from './video.js?v=2611200137';
-import './reviews-web.js?v=2611200137';
-import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200137';
-import { mini, TRIP_ICON } from './covers.js?v=2611200137';
+} from './firebase.js?v=2611200138';
+import { openAuth } from './account.js?v=2611200138';
+import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200138';
+import { SERVER_URL, SITE_NAME } from './config.js?v=2611200138';
+import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200138';
+import { parseVideo, videoButton } from './video.js?v=2611200138';
+import './reviews-web.js?v=2611200138';
+import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200138';
+import { mini, TRIP_ICON } from './covers.js?v=2611200138';
 import { startRegistration, startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
 
 const $ = (id) => document.getElementById(id);
@@ -277,6 +277,19 @@ $('wzNext').onclick = () => {
   openById(W.id, true);
 };
 $('wzBack').onclick = () => { if (step > 1) { step--; wzShow(); } };
+// לחיצה על שם השלב (יעד / תאריכים / אופי הטיול / העדפות) קופצת ישר אליו
+document.querySelectorAll('.wz-steps span').forEach((x) => {
+  x.setAttribute('role', 'button'); x.tabIndex = 0;
+  const go = async () => {
+    const n = +x.dataset.s;
+    if (n > 1 && !W.id) {
+      if (lastList[0]) await choose(lastList[0]);
+      if (!W.id) { step = 1; wzShow(); $('q').focus(); toast('קודם בוחרים יעד'); return; }
+    }
+    step = n; wzShow();
+  };
+  x.onclick = go; x.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+});
 
 async function openById(id, fromWz) {
   showLoader();

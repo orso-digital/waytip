@@ -1,5 +1,5 @@
 // יעדים שמורים: נשמרים בדפדפן, ולמשתמש מחובר (כולל אורח) גם בחשבון, כדי שיופיעו בכל מכשיר.
-import { auth, db, doc, getDoc, setDoc, serverTimestamp } from './firebase.js?v=2611200137';
+import { auth, db, doc, getDoc, setDoc, serverTimestamp } from './firebase.js?v=2611200138';
 const KEY = 'waytip.saved';
 let items = [];
 const listeners = new Set();
