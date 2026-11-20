@@ -1,7 +1,8 @@
 # אוסף מ-OpenStreetMap מקומות כשרים / טבעוניים / ללא גלוטן / חלאל ובתי כנסת וחב"ד
 # ליעדים הפופולריים, ושומר כקובץ בתוך האתר – כך שהם נטענים מיד ותמיד.
 # רץ אוטומטית ב-GitHub פעם בשבוע. נתונים: © OpenStreetMap contributors (ODbL).
-import json, re, time, urllib.request, urllib.parse, os, sys
+import json, re, time, urllib.request, urllib.parse, os, sys, functools
+print = functools.partial(print, flush=True)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src = open(os.path.join(ROOT, 'places.js'), encoding='utf-8').read()
@@ -13,22 +14,24 @@ SETS = ['["diet:kosher"~"^(yes|only)$"]', '["kosher"~"^(yes|only)$"]', '["name"~
         '["amenity"="place_of_worship"]["religion"="jewish"]', '["diet:vegan"~"^(yes|only)$"]', '["diet:gluten_free"~"^(yes|only)$"]',
         '["diet:halal"~"^(yes|only)$"]', '["diet:vegetarian"="only"]']
 
-def get(url, data=None, t=90):
+def get(url, data=None, t=45):
     req = urllib.request.Request(url, data=data, headers=UA)
     with urllib.request.urlopen(req, timeout=t) as r: return json.loads(r.read().decode())
 
 def slug(s): return re.sub(r'[^a-z0-9]+', '-', s.lower()).strip('-')
 
-only = sys.argv[1:]
+only = [x for a in sys.argv[1:] for x in a.split(',') if x]
+start = time.time()
 for en, cc in cities:
     if only and slug(en) not in only: continue
+    if time.time() - start > 45 * 60: print('time budget reached'); break
     out = os.path.join(ROOT, 'data', 'osm', slug(en) + '.json')
     try:
         g = get('https://geocoding-api.open-meteo.com/v1/search?' + urllib.parse.urlencode({'name': en, 'count': 5, 'language': 'en'}))
         r = next((x for x in g.get('results', []) if x.get('country_code') == cc), None)
         if not r: print('no geo', en); continue
         lat, lon = r['latitude'], r['longitude']
-        q = '[out:json][timeout:60];(' + ''.join(f'nwr{f}(around:25000,{lat},{lon});' for f in SETS) + ');out center tags 400;'
+        q = '[out:json][timeout:30];(' + ''.join(f'nwr{f}(around:25000,{lat},{lon});' for f in SETS) + ');out center tags 400;'
         els = None
         for m in MIRRORS:
             try: els = get(m, ('data=' + urllib.parse.quote(q)).encode())['elements']; break
