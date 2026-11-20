@@ -31,12 +31,16 @@ for en, cc in cities:
         r = next((x for x in g.get('results', []) if x.get('country_code') == cc), None)
         if not r: print('no geo', en); continue
         lat, lon = r['latitude'], r['longitude']
-        q = '[out:json][timeout:30];(' + ''.join(f'nwr{f}(around:25000,{lat},{lon});' for f in SETS) + ');out center tags 400;'
-        els = None
-        for m in MIRRORS:
-            try: els = get(m, ('data=' + urllib.parse.quote(q)).encode())['elements']; break
-            except Exception as e: print('  mirror fail', m, e)
-        if els is None: print('FAILED', en); continue
+        # שאילתה קטנה לכל סוג מקום (שאילתה אחת גדולה נתקעת בשרתי המפה)
+        els, ok = [], 0
+        for f in SETS:
+            rad = 12000 if 'name' in f else 25000
+            q = f'[out:json][timeout:25];nwr{f}(around:{rad},{lat},{lon});out center tags 200;'
+            for m in MIRRORS:
+                try: els += get(m, ('data=' + urllib.parse.quote(q)).encode(), 35)['elements']; ok += 1; break
+                except Exception as e: print('  fail', f[:30], m.split('/')[2], e)
+            time.sleep(1)
+        if not ok: print('FAILED', en); continue
         seen, keep = set(), []
         for e in els:
             t = e.get('tags') or {}
