@@ -678,3 +678,4 @@ html[data-theme=app] .chip{transition:background .2s,color .2s,box-shadow .2s,tr
 html[data-theme=app] .wz-steps span{cursor:pointer;transition:color .2s}
 html[data-theme=app] .wz-steps span:hover{color:var(--brown2)}
 html[data-theme=app] .wz-steps span:focus-visible{outline:2px solid var(--sand);outline-offset:2px;border-radius:6px}
+html[data-theme=app] .aiv.unv{background:var(--sand2);color:var(--brown2)}

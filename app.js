@@ -1,18 +1,18 @@
-import { isEN, startI18n, langButton } from './i18n.js?v=2611200138';
-import { searchExtra, extraById, searchPop } from './places.js?v=2611200138';
-import './a11y.js?v=2611200138';
+import { isEN, startI18n, langButton } from './i18n.js?v=2611200300';
+import { searchExtra, extraById, searchPop } from './places.js?v=2611200300';
+import './a11y.js?v=2611200300';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
   addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
-} from './firebase.js?v=2611200138';
-import { openAuth } from './account.js?v=2611200138';
-import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200138';
-import { SERVER_URL, SITE_NAME } from './config.js?v=2611200138';
-import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200138';
-import { parseVideo, videoButton } from './video.js?v=2611200138';
-import './reviews-web.js?v=2611200138';
-import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200138';
-import { mini, TRIP_ICON } from './covers.js?v=2611200138';
+} from './firebase.js?v=2611200300';
+import { openAuth } from './account.js?v=2611200300';
+import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200300';
+import { SERVER_URL, SITE_NAME } from './config.js?v=2611200300';
+import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200300';
+import { parseVideo, videoButton } from './video.js?v=2611200300';
+import './reviews-web.js?v=2611200300';
+import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200300';
+import { mini, TRIP_ICON } from './covers.js?v=2611200300';
 import { startRegistration, startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
 
 const $ = (id) => document.getElementById(id);
@@ -743,8 +743,8 @@ function drawAI() {
   const g = (n) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(n + ' ' + dest.enName);
   box.classList.remove('hidden');
   box.innerHTML = `<h3><span aria-hidden="true">✨</span> המלצות AI בשבילכם</h3>
-    <p class="ainote">נבחר על ידי בינה מלאכותית לפי היעד, התאריכים, אופי הטיול והסינון. מקומות שה-AI הציע נבדקו מול המפה ומוצגים רק אם נמצאו. אלה לא ביקורות של מטיילים, אז בדקו שעות וכשרות מול המקום עצמו.</p>
-    ${aiData.picks.length ? `<ol class="aipicks">${aiData.picks.map((p) => `<li><b>${esc(p.name)}</b>${p.verified ? ' <i class="aiv">✓ נמצא במפה</i>' : ''}<span>${esc(p.why)}</span>${p.address ? `<small class="aiaddr">📍 ${esc(p.address)}</small>` : ''}<a class="ainav" href="${p.lat ? `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}` : g(p.name)}" target="_blank" rel="noopener">ניווט</a></li>`).join('')}</ol>` : ''}
+    <p class="ainote">נבחר על ידי בינה מלאכותית לפי היעד, התאריכים, אופי הטיול והסינון. מקומות שנמצאו במפה מסומנים ✓, ואת המסומנים "כדאי לוודא" בדקו לפני שהולכים. אלה לא ביקורות של מטיילים, אז בדקו שעות וכשרות מול המקום עצמו.</p>
+    ${aiData.picks.length ? `<ol class="aipicks">${aiData.picks.map((p) => `<li><b>${esc(p.name)}</b>${p.verified ? ' <i class="aiv">✓ נמצא במפה</i>' : p.verified === false ? ' <i class="aiv unv">כדאי לוודא</i>' : ''}<span>${esc(p.why)}</span>${p.address ? `<small class="aiaddr">📍 ${esc(p.address)}</small>` : ''}<a class="ainav" href="${p.lat ? `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}` : g(p.name)}" target="_blank" rel="noopener">ניווט</a></li>`).join('')}</ol>` : ''}
     ${aiData.tips?.length ? `<div class="aitips"><b>טיפים לטיול שלכם</b><ul>${aiData.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}`;
 }
 
