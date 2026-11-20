@@ -1,18 +1,18 @@
-import { isEN, startI18n, langButton } from './i18n.js?v=2611200300';
-import { searchExtra, extraById, searchPop } from './places.js?v=2611200300';
-import './a11y.js?v=2611200300';
+import { isEN, startI18n, langButton } from './i18n.js?v=2611200322';
+import { searchExtra, extraById, searchPop } from './places.js?v=2611200322';
+import './a11y.js?v=2611200322';
 import {
   auth, db, logout, onAuthStateChanged, collection, query, where, getDocs,
   addDoc, serverTimestamp, esc, MONTHS, doc, getDoc, deleteDoc, removeUser, resendVerification,
-} from './firebase.js?v=2611200300';
-import { openAuth } from './account.js?v=2611200300';
-import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200300';
-import { SERVER_URL, SITE_NAME } from './config.js?v=2611200300';
-import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200300';
-import { parseVideo, videoButton } from './video.js?v=2611200300';
-import './reviews-web.js?v=2611200300';
-import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200300';
-import { mini, TRIP_ICON } from './covers.js?v=2611200300';
+} from './firebase.js?v=2611200322';
+import { openAuth } from './account.js?v=2611200322';
+import { onSaved, isSaved, toggleSaved, syncSaved, savedList, clearLocalSaved } from './saved.js?v=2611200322';
+import { SERVER_URL, SITE_NAME } from './config.js?v=2611200322';
+import { loaderBlock, showLoader, hideLoader } from './loader.js?v=2611200322';
+import { parseVideo, videoButton } from './video.js?v=2611200322';
+import './reviews-web.js?v=2611200322';
+import { TRIPS, CATS, PREFS, PREF_GROUPS, T, KW, catFor } from './vocab.js?v=2611200322';
+import { mini, TRIP_ICON } from './covers.js?v=2611200322';
 import { startRegistration, startAuthentication } from 'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10.0.0/+esm';
 
 const $ = (id) => document.getElementById(id);
@@ -611,6 +611,7 @@ async function loadWiki(d) {
 const OSM_SETS = [
   ['kosher', '["diet:kosher"~"^(yes|only)$"]'], ['vegan', '["diet:vegan"~"^(yes|only)$"]'], ['glutenfree', '["diet:gluten_free"~"^(yes|only)$"]'],
   ['halal', '["diet:halal"~"^(yes|only)$"]'], ['vegetarian', '["diet:vegetarian"="only"]'], ['jewish', '["amenity"="place_of_worship"]["religion"="jewish"]'],
+  ['kosher2', '["kosher"~"^(yes|only)$"]'], ['kname', '["name"~"kosher|chabad|כשר|חב\\"ד",i]'], ['kcuisine', '["cuisine"~"kosher|jewish",i]'],
 ];
 let osmFail = false, osmLoading = false;
 async function loadOSM(d) {
@@ -618,13 +619,13 @@ async function loadOSM(d) {
   const R = 20000, at = `(around:${R},${d.lat},${d.lon})`;
   const q = '[out:json][timeout:20];' + OSM_SETS.map(([k, f], i) => `nwr${f}${at}->.s${i};.s${i} out center tags 40;`).join('');
   osmFail = false;
-  // קודם דרך השרת שלנו (שומר תוצאות, אז בפעם הבאה זה מיידי), ואם לא – ישירות
+  // 1) קובץ מוכן מראש ביעדים הפופולריים (מתעדכן כל שבוע ב-GitHub) – מיידי ותמיד עובד
   try {
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 40000);
-    const r = await fetch(`${SERVER_URL}/places?lat=${d.lat}&lon=${d.lon}`, { signal: ctl.signal });
-    clearTimeout(t);
-    if (r.ok) { const j = await r.json(); const els = j.elements || []; if (j.fail && !els.length) throw new Error('osm'); const seen = new Set(); return els.filter((e) => e.tags && e.tags.name && !seen.has(e.id) && seen.add(e.id)).map(osmItem); }
+    const sl = String(d.enName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const r = await fetch(`data/osm/${sl}.json`);
+    if (r.ok) { const j = await r.json(); const seen = new Set(); return (j.elements || []).filter((e) => e.tags && e.tags.name && !seen.has(e.id) && seen.add(e.id)).map(osmItem); }
   } catch (e) {}
+  // 2) ישירות מהטלפון של המשתמש
   // כמה שרתים של OpenStreetMap: אם אחד עמוס או איטי, מנסים את הבא
   for (const base of ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter']) {
     try {
